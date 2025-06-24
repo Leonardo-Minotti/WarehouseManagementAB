@@ -55,6 +55,7 @@ def SetupPage():
 
 @solara.component
 def WarehouseGrid(model: WarehouseModel):
+    _ = tick.value
 
     styles = {
         "display": "grid",
@@ -74,8 +75,7 @@ def WarehouseGrid(model: WarehouseModel):
 
                 # 👇 Check se c’è un ordine in questa cella
                 order = model.orders_on_grid.get((x, y))
-                print("Ordini", order)
-                if order:
+                if order is not None:
                     content = str(order)
                 else:
                     content = ""
@@ -119,9 +119,13 @@ def SimulationPage():
     with solara.Row():
         WarehouseGrid(model.value)
         with solara.Column():
-            solara.Markdown("### Ordini in coda")
-            for order in list(model.value.order_queue):
-                solara.Text(f"- {order}")
+            solara.Markdown("### Ordini in coda:")
+            if model.value.order_queue:
+                orders_str = ", ".join(str(order) for order in model.value.order_queue)
+                solara.Text(orders_str)
+            else:
+                solara.Text("Nessun ordine in coda")
+
 
 #Routing
 routes = [

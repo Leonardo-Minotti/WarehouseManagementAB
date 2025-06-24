@@ -72,8 +72,9 @@ class WarehouseModel(Model):
 
 
     def generate_order(self):
-        print("Stato ordini su griglia:", self.orders_on_grid)
+        #print("Stato ordini su griglia:", self.orders_on_grid)
         order_size = random.randint(5, self.truck_capacity)
+        print("Size: ", order_size)
         placed = False
         for pos in self.loading_positions:
             if pos not in self.orders_on_grid:
