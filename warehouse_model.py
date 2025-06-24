@@ -8,7 +8,7 @@ class StaticTile(Agent):
         self.tile_type = tile_type
 
 class WarehouseModel(Model):
-    def __init__(self, width=30, height=30, num_unloading=2, num_loading=2):
+    def __init__(self, width=10, height=10, num_unloading=2, num_loading=2):
         super().__init__()
         self.grid = MultiGrid(width, height, torus=False)
         self.agents.do("step")
@@ -17,41 +17,42 @@ class WarehouseModel(Model):
         self._create_layout(num_unloading, num_loading)
 
     def _create_layout(self, num_unloading, num_loading):
-        w = self.grid.width
-        h = self.grid.height
 
-        # --- Posiziona zone di carico (Loading) sul margine sinistro (colonna 0) ---
+        #Posizionamento zona scarico
+        center_y = self.grid.height // 2
+        start_y = center_y - num_unloading // 2
+        for i in range(num_unloading):
+            y = start_y + i
+            if 0 <= y < self.grid.height:
+                self._place_tile(self.grid.width - 1, y, "Unloading")
+
+        #Posizionamento zona carico
         for x in range(num_loading):
             self._place_tile(x, 0, "Loading")
 
-        # --- Posiziona zone di scarico (Unloading) sul margine sinistro, centrate verticalmente ---
-        center_y = h // 2
-        start_y = center_y - (num_unloading // 2)
-        for i in range(num_unloading):
-            self._place_tile(w-1, start_y + i, "Unloading")
+            #Posizionamento Rack
+            block_size = 10
+            spacing = 3
 
-        # --- Blocchi di scaffali, ognuno fatto da più righe ---
-        block_gap = 3  # spazio tra gruppi/blocchi
-        block_w = 10  # larghezza del blocco (in colonne/celle)
-        row_gap = 1  # spazio tra le righe all'interno di un blocco
+            start_x = 3  # (30 - (10*2 + 3)) / 2
+            start_y = 4
 
-        # Blocchi nei 4 quadranti
-        block_origins = [
-            (block_gap, block_gap),  # alto sinistra
-            (w // 2 + block_gap // 2, block_gap),  # alto destra
-            (block_gap, h // 2 + block_gap // 2),  # basso sinistra
-            (w // 2 + block_gap // 2, h // 2 + block_gap // 2)  # basso destra
-        ]
+            # Posizioni dei 4 blocchi
+            block_origins = [
+                (start_x, start_y + block_size + spacing),  # Top-left
+                (start_x + block_size + spacing, start_y + block_size + spacing),  # Top-right
+                (start_x, start_y),  # Bottom-left
+                (start_x + block_size + spacing, start_y)  # Bottom-right
+            ]
 
-        # Popola 4 blocchi, ognuno con N righe di scaffali parallele separate da row_gap
-        for origin_x, origin_y in block_origins:
-            n_rows_per_block = 5
-            for ri in range(n_rows_per_block):
-                y = origin_y + ri * (1 + row_gap)
-                if y >= h - 1:  # evita di uscire dai limiti
-                    break
-                for x in range(origin_x, min(origin_x + block_w, w - 1)):
-                    self._place_tile(x, y, "Rack")
+            for origin_x, origin_y in block_origins:
+                for dx in range(block_size):
+                    for dy in range(block_size):
+                        if dy % 2 == 0:
+                            x = origin_x + dx
+                            y = origin_y + dy
+                            if x < self.grid.width and y < self.grid.height:
+                                self._place_tile(x, y, "Rack")
 
     def _place_tile(self, x, y, tile_type):
         tile = StaticTile(self.next_id_val, self, tile_type)
