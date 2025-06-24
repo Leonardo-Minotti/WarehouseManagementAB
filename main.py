@@ -28,8 +28,8 @@ def SetupPage():
 
     def on_click():
         model.value = WarehouseModel(
-            width=20,
-            height=20,
+            width=30,
+            height=30,
             num_unloading=num_unloading.value,
             num_loading=num_loading.value
         )

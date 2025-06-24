@@ -17,16 +17,42 @@ class WarehouseModel(Model):
         self._create_layout(num_unloading, num_loading)
 
     def _create_layout(self, num_unloading, num_loading):
-        for x in range(num_unloading):
-            self._place_tile(x, 0, "Unloading")
 
-        for x in range(self.grid.width - num_loading, self.grid.width):
+        #Posizionamento zona scarico
+        center_y = self.grid.height // 2
+        start_y = center_y - num_unloading // 2
+        for i in range(num_unloading):
+            y = start_y + i
+            if 0 <= y < self.grid.height:
+                self._place_tile(self.grid.width - 1, y, "Unloading")
+
+        #Posizionamento zona carico
+        for x in range(num_loading):
             self._place_tile(x, 0, "Loading")
 
-        for x in range(3, self.grid.width - 3):
-            for y in range(2, self.grid.height - 2):
-                if x % 2 == 0:
-                    self._place_tile(x, y, "Rack")
+            #Posizionamento Rack
+            block_size = 10
+            spacing = 3
+
+            start_x = 3  # (30 - (10*2 + 3)) / 2
+            start_y = 4
+
+            # Posizioni dei 4 blocchi
+            block_origins = [
+                (start_x, start_y + block_size + spacing),  # Top-left
+                (start_x + block_size + spacing, start_y + block_size + spacing),  # Top-right
+                (start_x, start_y),  # Bottom-left
+                (start_x + block_size + spacing, start_y)  # Bottom-right
+            ]
+
+            for origin_x, origin_y in block_origins:
+                for dx in range(block_size):
+                    for dy in range(block_size):
+                        if dy % 2 == 0:
+                            x = origin_x + dx
+                            y = origin_y + dy
+                            if x < self.grid.width and y < self.grid.height:
+                                self._place_tile(x, y, "Rack")
 
     def _place_tile(self, x, y, tile_type):
         tile = StaticTile(self.next_id_val, self, tile_type)
