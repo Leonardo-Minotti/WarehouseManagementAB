@@ -11,7 +11,8 @@ color_map = {
     "Unloading": "orange",
     "Loading": "blue",
     "Rack": "gray",
-    "Empty": "white"
+    "Empty": "white",
+    "ForkLift": "green",
 }
 cell_size_px = 30
 
@@ -53,7 +54,16 @@ def WarehouseGrid(model: WarehouseModel):
             for x in range(model.grid.width):
                 agents = model.grid.get_cell_list_contents((x, y))
                 if agents:
-                    color = color_map.get(agents[0].tile_type, "white")
+                    # Dai la priorità alla colorazione del muletto
+                    forklift_present = any(type(a).__name__ == "ForkLift" for a in agents)
+                    if forklift_present:
+                        color = color_map["ForkLift"]
+                    else:
+                        tile_agent = next((a for a in agents if hasattr(a, "tile_type")), None)
+                        if tile_agent:
+                            color = color_map.get(tile_agent.tile_type, "white")
+                        else:
+                            color = color_map["Empty"]
                 else:
                     color = color_map["Empty"]
                 solara.Div(
@@ -65,6 +75,8 @@ def WarehouseGrid(model: WarehouseModel):
                     }
                 )
 
+
+
 @solara.component
 def SimulationPage():
     solara.Title("Simulazione Magazzino")
@@ -72,6 +84,12 @@ def SimulationPage():
         solara.Markdown("⚠️ Nessuna simulazione avviata.")
         return
     WarehouseGrid(model.value)
+
+    def on_next_step():
+        model.value.step()
+
+    solara.Button("Avanza", on_click=on_next_step)
+
 
 #Routing
 routes = [
