@@ -5,6 +5,7 @@ from warehouse_model import WarehouseModel
 num_unloading = solara.reactive(2)
 num_loading = solara.reactive(2)
 model = solara.reactive(None)
+tick = solara.reactive(0)
 
 # Colori celle
 color_map = {
@@ -42,6 +43,7 @@ def SetupPage():
 
 @solara.component
 def WarehouseGrid(model: WarehouseModel):
+    _ = tick.value
     styles = {
         "display": "grid",
         "gridTemplateColumns": f"repeat({model.grid.width}, {cell_size_px}px)",
@@ -80,6 +82,8 @@ def WarehouseGrid(model: WarehouseModel):
 @solara.component
 def SimulationPage():
     solara.Title("Simulazione Magazzino")
+
+    _ = tick.value
     if model.value is None:
         solara.Markdown("⚠️ Nessuna simulazione avviata.")
         return
@@ -87,6 +91,8 @@ def SimulationPage():
 
     def on_next_step():
         model.value.step()
+        tick.value += 1  # Forza Solara a ridisegnare la UI
+
 
     solara.Button("Avanza", on_click=on_next_step)
 
