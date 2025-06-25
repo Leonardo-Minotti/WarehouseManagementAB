@@ -5,6 +5,7 @@ from mesa.discrete_space import OrthogonalVonNeumannGrid
 from mesa.agent import Agent
 from forkLift import ForkLift
 from mesa.experimental.devs import ABMSimulator
+from dock import Dock, UnloadingDock, LoadingDock
 
 
 class WarehouseModel(Model):
@@ -41,6 +42,20 @@ class WarehouseModel(Model):
                 # Crea il muletto posizionandolo alla sinistra della dock di scarico
                 forklift = ForkLift(self)
                 self.grid.place_agent(forklift, (self.grid.width - 2, y))
+
+        #Posizionamento dock scarico
+        center_y = self.grid.height // 2
+        start_y = center_y - num_unloading // 2
+        for i in range(num_unloading):
+            y = start_y + i
+            if 0 <= y < self.grid.height:
+                unloading_dock = UnloadingDock(self)
+                self.grid.place_agent(unloading_dock, (self.grid.width - 1, y))
+
+        #Posizionamento dock carico
+        for x in range(num_loading):
+                loading_dock = LoadingDock(self)
+                self.grid.place_agent(loading_dock, (x, 0))
 
     def step(self):
         # Usa la classe ForkLift, non il modulo forkLift
