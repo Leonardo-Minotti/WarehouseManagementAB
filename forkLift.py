@@ -1,10 +1,17 @@
 # forkLift.py
 from mesa.agent import Agent
+from mesa.discrete_space import CellAgent, FixedAgent
 
-class ForkLift(Agent):
-    def __init__(self, model):
+class ForkLift(CellAgent):
+
+
+    def __init__(
+            self,
+            model,
+            free = True,
+    ):
         super().__init__(model)
-        # puoi aggiungere altri attributi qui (ad es. stato, capacità, ecc.)
+        self.free = free
 
     def step(self):
         # Recupera la posizione attuale
@@ -19,16 +26,16 @@ class ForkLift(Agent):
         if new_x < 0:
             return  # Blocca se uscirebbe fuori dalla griglia
 
-        # Recupera il contenuto della cella di destinazione
+        # Verifica se la nuova posizione contiene un rack
+        if self.model.is_rack_position(new_pos):
+            return  # Muletto bloccato dal rack
+
+        # Recupera il contenuto della cella di destinazione per altri ostacoli
         cellmates = self.model.grid.get_cell_list_contents(new_pos)
 
-        # Se trova un ostacolo (es. una StaticTile speciale) resta fermo
-        ostacolo = any(
-            hasattr(a, 'tile_type') and a.tile_type in ["Rack", "Unloading", "Loading"]
-            for a in cellmates
-        )
-        if ostacolo:
-            return  # Muletto bloccato
+        # Se trova un altro agente (es. un altro muletto) resta fermo
+        if len(cellmates) > 0:
+            return  # Muletto bloccato da altro agente
 
         # Altrimenti effettua lo spostamento
         self.model.grid.move_agent(self, new_pos)

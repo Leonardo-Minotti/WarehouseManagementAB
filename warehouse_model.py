@@ -1,72 +1,74 @@
 from mesa.model import Model
+from mesa.datacollection import DataCollector
 from mesa.space import MultiGrid
+from mesa.discrete_space import OrthogonalVonNeumannGrid
 from mesa.agent import Agent
 from forkLift import ForkLift
+from mesa.experimental.devs import ABMSimulator
 
-
-class StaticTile(Agent):
-    def __init__(self, model, tile_type):
-        super().__init__(model)
-        self.tile_type = tile_type
 
 class WarehouseModel(Model):
-    def __init__(self, width=10, height=10, num_unloading=2, num_loading=2):
+
+    def __init__(
+        self,
+        width=30,
+        height=30,
+        num_unloading=2,
+        num_loading=2,
+        simulator: ABMSimulator = None,
+    ):
+
         super().__init__()
+        self.simulator = simulator
+        self.simulator.setup(self)
+
+        self.height = height
+        self.width = width
+        self.num_unloading = num_unloading  # Salva per la visualizzazione
+        self.num_loading = num_loading      # Salva per la visualizzazione
+
         self.grid = MultiGrid(width, height, torus=False)
-        self.agents.shuffle_do("step")
-        self.next_id_val = 0  # Custom ID counter
 
         self._create_layout(num_unloading, num_loading)
 
     def _create_layout(self, num_unloading, num_loading):
-
-        #Posizionamento zona scarico
+        # Posizionamento muletti nelle zone di scarico
         center_y = self.grid.height // 2
         start_y = center_y - num_unloading // 2
         for i in range(num_unloading):
             y = start_y + i
             if 0 <= y < self.grid.height:
-                self._place_tile(self.grid.width - 1, y, "Unloading")
                 # Crea il muletto posizionandolo alla sinistra della dock di scarico
-                forklift = ForkLift( self)
+                forklift = ForkLift(self)
                 self.grid.place_agent(forklift, (self.grid.width - 2, y))
-                # Se vuoi schedularlo:
-
-                self.next_id_val += 1
-
-        #Posizionamento zona carico
-        for x in range(num_loading):
-            self._place_tile(x, 0, "Loading")
-
-            #Posizionamento Rack
-            block_size = 10
-            spacing = 3
-
-            start_x = 3  # (30 - (10*2 + 3)) / 2
-            start_y = 4
-
-            # Posizioni dei 4 blocchi
-            block_origins = [
-                (start_x, start_y + block_size + spacing),  # Top-left
-                (start_x + block_size + spacing, start_y + block_size + spacing),  # Top-right
-                (start_x, start_y),  # Bottom-left
-                (start_x + block_size + spacing, start_y)  # Bottom-right
-            ]
-
-            for origin_x, origin_y in block_origins:
-                for dx in range(block_size):
-                    for dy in range(block_size):
-                        if dy % 2 == 0:
-                            x = origin_x + dx
-                            y = origin_y + dy
-                            if x < self.grid.width and y < self.grid.height:
-                                self._place_tile(x, y, "Rack")
-
-    def _place_tile(self, x, y, tile_type):
-        tile = StaticTile(self, tile_type)
-        self.grid.place_agent(tile, (x, y))
-        self.next_id_val += 1
 
     def step(self):
-        self.agents.shuffle_do("step")
+        # Usa la classe ForkLift, non il modulo forkLift
+        self.agents_by_type[ForkLift].shuffle_do("step")
 
+    def is_rack_position(self, pos):
+        """Controlla se la posizione contiene un rack"""
+        x, y = pos
+
+        # Parametri dei rack (devono coincidere con quelli in main.py)
+        block_size = 10
+        spacing = 3
+        start_x = 3
+        start_y = 4
+
+        block_origins = [
+            (start_x, start_y + block_size + spacing),
+            (start_x + block_size + spacing, start_y + block_size + spacing),
+            (start_x, start_y),
+            (start_x + block_size + spacing, start_y)
+        ]
+
+        for origin_x, origin_y in block_origins:
+            for dx in range(block_size):
+                for dy in range(block_size):
+                    if dy % 2 == 0:  # Solo le righe pari hanno rack
+                        rack_x = origin_x + dx
+                        rack_y = origin_y + dy
+                        if x == rack_x and y == rack_y:
+                            return True
+        return False
