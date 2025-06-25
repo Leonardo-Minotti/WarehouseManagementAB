@@ -1,6 +1,10 @@
+import random
+
 from mesa.model import Model
 from mesa.space import MultiGrid
 from mesa.agent import Agent
+from collections import deque
+
 from forkLift import ForkLift
 
 
@@ -10,12 +14,18 @@ class StaticTile(Agent):
         self.tile_type = tile_type
 
 class WarehouseModel(Model):
-    def __init__(self, width=10, height=10, num_unloading=2, num_loading=2):
+    def __init__(self, width=10, height=10, num_unloading=2, num_loading=2, order_frequency=10, truck_capacity=5):
         super().__init__()
         self.grid = MultiGrid(width, height, torus=False)
-        self.agents.shuffle_do("step")
+        self.num_unloading = num_unloading
+        self.num_loading = num_loading
+        self.agents.do("step")
+        self.order_frequency = order_frequency
+        self.truck_capacity = truck_capacity
         self.next_id_val = 0  # Custom ID counter
-
+        self.order_queue = deque()
+        self.loading_positions = []  # Da riempire con le coordinate della zona di carico
+        self.orders_on_grid = {}  # {(x, y): ordine_size}
         self._create_layout(num_unloading, num_loading)
 
     def _create_layout(self, num_unloading, num_loading):
@@ -37,7 +47,7 @@ class WarehouseModel(Model):
         #Posizionamento zona carico
         for x in range(num_loading):
             self._place_tile(x, 0, "Loading")
-
+            self.loading_positions.append((x, 0))
             #Posizionamento Rack
             block_size = 10
             spacing = 3
@@ -66,6 +76,21 @@ class WarehouseModel(Model):
         tile = StaticTile(self, tile_type)
         self.grid.place_agent(tile, (x, y))
         self.next_id_val += 1
+
+
+
+    def generate_order(self):
+        #print("Stato ordini su griglia:", self.orders_on_grid)
+        order_size = random.randint(5, self.truck_capacity)
+        print("Size: ", order_size)
+        placed = False
+        for pos in self.loading_positions:
+            if pos not in self.orders_on_grid:
+                self.orders_on_grid[pos] = order_size
+                placed = True
+                break
+        if not placed:
+            self.order_queue.append(order_size)
 
     def step(self):
         self.agents.shuffle_do("step")
