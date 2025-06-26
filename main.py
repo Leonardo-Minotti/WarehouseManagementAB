@@ -42,11 +42,63 @@ def forkLiftportrayal(agent):
     return portrayal
 
 
+def warehouse_status_component(model):
+    """Componente personalizzato per mostrare lo stato dei dock e della coda"""
+
+    # Crea il contenuto HTML per i dock
+    docks_info = []
+
+    for i, dock in enumerate(model.loading_docks, 1):
+        if dock.current_order is not None:
+            # Dock occupato - mostra i colori dell'ordine
+            colors_info = []
+            for color, quantity in dock.current_order.get_tutte_capacita().items():
+                if quantity > 0:  # Mostra solo i colori con quantità > 0
+                    colors_info.append(f"{color.value.capitalize()}: {quantity}")
+
+            colors_text = ", ".join(colors_info)
+            dock_status = f"**Dock {i}:** {colors_text} (Totale: {dock.current_order.get_capacita_totale()})"
+        else:
+            # Dock libero
+            dock_status = f"**Dock {i}:** Libero"
+
+        docks_info.append(dock_status)
+
+    # Crea il contenuto HTML per la coda
+    queue_info = []
+    if model.order_queue:
+        queue_info.append(f"**Ordini in coda:**")
+        for i, order in enumerate(model.order_queue, 1):
+            queue_info.append(f" {order.get_capacita_totale()},")
+    else:
+        queue_info.append("**Ordini in coda:** Nessun ordine in attesa")
+
+    # Combina tutto il contenuto
+    content = []
+    content.append("## 📦 Stato Warehouse")
+    content.append("### 🚛 Dock di Carico")
+    content.extend(docks_info)
+    content.append("")  # Riga vuota
+    content.extend(queue_info)
+
+    # Aggiungi statistiche generali
+    content.append("")
+    content.append("### 📊 Statistiche")
+    free_docks = sum(1 for dock in model.loading_docks if dock.free)
+    content.append(f"**Dock liberi:** {free_docks}/{len(model.loading_docks)}")
+    content.append(f"**Step corrente:** {model.step_counter}")
+    content.append(f"**Prossimo ordine tra:** {model.order_time - (model.step_counter - model.last_order_step)} step")
+
+    return solara.Markdown("\n".join(content))
+
+
 model_params = {
     "width": 30,
     "height": 30,
     "num_unloading": Slider("Number of unloading docks", 1, 1, 5),
-    "num_loading": Slider("Number of loading docks", 1, 1, 5)
+    "num_loading": Slider("Number of loading docks", 1, 1, 5),
+    "dock_capacity": Slider("Maxinum dock capacity", 1, 5, 10),
+    "order_time": Slider("Time order", 1, 10, 20)
 }
 
 
@@ -107,7 +159,7 @@ model = WarehouseModel(simulator=simulator)
 
 page = SolaraViz(
     model,
-    components=[space_component, CommandConsole],
+    components=[space_component,warehouse_status_component, CommandConsole],
     model_params=model_params,
     name="Warehouse",
     simulator=simulator,
