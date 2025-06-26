@@ -1,113 +1,157 @@
+import threading
+import time
 
 import solara
-from matplotlib import patches
-from mesa.visualization import SolaraViz, make_plot_component
-
-from dock import Dock, UnloadingDock, LoadingDock
-from forkLift import ForkLift
 from warehouse_model import WarehouseModel
-from mesa.experimental.devs import ABMSimulator
-from mesa.visualization import (
-    CommandConsole,
-    Slider,
-    SolaraViz,
-    make_plot_component,
-    make_space_component,
-)
+
+# Variabili reattive globali
+num_unloading = solara.reactive(2)
+num_loading = solara.reactive(2)
+order_frequency = solara.reactive(5)  # ogni quanti step arriva un ordine
+truck_capacity = solara.reactive(10)  # quanti pacchi può trasportare un camion
+model = solara.reactive(None)
+tick = solara.reactive(0)
+order_thread_started = False
+
+tick = solara.reactive(0)
+
+# Colori celle
+color_map = {
+    "Unloading": "orange",
+    "Loading": "blue",
+    "Rack": "gray",
+    "Empty": "white",
+    "ForkLift": "green",
+}
+cell_size_px = 30
+
+@solara.component
+def SetupPage():
+    solara.Title("Setup Magazzino")
+    router = solara.use_router()  # ✅ Ottieni il router all’interno del componente
+
+    solara.Markdown("### Seleziona quante zone di scarico e carico vuoi")
+
+    with solara.Row():
+        solara.SliderInt("Zone di Scarico", value=num_unloading, min=1, max=5)
+        solara.SliderInt("Zone di Carico", value=num_loading, min=1, max=5)
+
+    with solara.Row():
+        solara.SliderInt("Frequenza ordini (step)", value=order_frequency, min=10, max=25)
+        solara.SliderInt("Capacità camion", value=truck_capacity, min=5, max=20)
+
+    def on_click():
+        model.value = WarehouseModel(
+            width=30,
+            height=30,
+            num_unloading=num_unloading.value,
+            num_loading=num_loading.value,
+            order_frequency = order_frequency.value,
+            truck_capacity = truck_capacity.value
+        )
+        router.push("magazzino")
 
 
-def forkLiftportrayal(agent):
-    if agent is None:
-        return
+    solara.Button("Avvia Simulazione", on_click=on_click)
 
-    portrayal = {
-        "size": 10,
+
+@solara.component
+def WarehouseGrid(model: WarehouseModel):
+    _ = tick.value
+
+    styles = {
+        "display": "grid",
+        "gridTemplateColumns": f"repeat({model.grid.width}, {cell_size_px}px)",
+        "gridTemplateRows": f"repeat({model.grid.height}, {cell_size_px}px)",
+        "gap": "1px"
     }
 
-    # Correzione: usa isinstance con due argomenti
-    if isinstance(agent, ForkLift):  # Corretto: usa la classe ForkLift, non il modulo
-        portrayal["color"] = "tab:red"
-        portrayal["marker"] = "o"
-        portrayal["zorder"] = 1
-    elif isinstance(agent, UnloadingDock):
-        portrayal["color"] = "tab:green"
-        portrayal["marker"] = "s"
-        portrayal["zorder"] = 200
-    elif isinstance(agent, LoadingDock):
-        portrayal["color"] = "tab:blue"
-        portrayal["marker"] = "s"
-        portrayal["zorder"] = 200
-    return portrayal
+    with solara.Div(style=styles):
+        for y in reversed(range(model.grid.height)):
+            for x in range(model.grid.width):
+                agents = model.grid.get_cell_list_contents((x, y))
+                if agents:
+                    # Dai la priorità alla colorazione del muletto
+                    forklift_present = any(type(a).__name__ == "ForkLift" for a in agents)
+                    if forklift_present:
+                        color = color_map["ForkLift"]
+                    else:
+                        tile_agent = next((a for a in agents if hasattr(a, "tile_type")), None)
+                        if tile_agent:
+                            color = color_map.get(tile_agent.tile_type, "white")
+                        else:
+                            color = color_map["Empty"]
+                else:
+                    color = color_map["Empty"]
+
+                # 👇 Check se c’è un ordine in questa cella
+                order = model.orders_on_grid.get((x, y))
+                if order is not None:
+                    content = str(order)
+                else:
+                    content = ""
+
+                # 👇 Disegna la cella con l’eventuale ordine
+                solara.Div(
+                    style={
+                        "backgroundColor": color,
+                        "width": f"{cell_size_px}px",
+                        "height": f"{cell_size_px}px",
+                        "border": "1px solid #ccc",
+                        "display": "flex",
+                        "justifyContent": "center",
+                        "alignItems": "center",
+                        "fontWeight": "bold"                    },
+                    children=[solara.Text(content)]
+                )
+
+@solara.component
+def SimulationPage():
+    solara.Title("Simulazione Magazzino")
+
+    _ = tick.value
+    if model.value is None:
+        solara.Markdown("⚠️ Nessuna simulazione avviata.")
+        return
+
+    # Reactive per forzare il refresh
+    global order_thread_started
+    if not order_thread_started:
+        def order_loop():
+            while True:
+                time.sleep(model.value.order_frequency)
+                model.value.generate_order()
+                tick.value += 1  # Forza Solara a ridisegnare la UI
+
+        threading.Thread(target=order_loop, daemon=True).start()
+        order_thread_started = True
+
+    with solara.Row():
+        WarehouseGrid(model.value)
+        with solara.Column():
+            solara.Markdown("### Ordini in coda:")
+            if model.value.order_queue:
+                orders_str = ", ".join(str(order) for order in model.value.order_queue)
+                solara.Text(orders_str)
+            else:
+                solara.Text("Nessun ordine in coda")
 
 
-model_params = {
-    "width": 30,
-    "height": 30,
-    "num_unloading": Slider("Number of unloading docks", 1, 1, 5),
-    "num_loading": Slider("Number of loading docks", 1, 1, 5)
-}
+    def on_next_step():
+        model.value.step()
+        tick.value += 1  # Forza Solara a ridisegnare la UI
 
 
-def post_process_space(ax):
-    ax.set_aspect("equal")
-    ax.set_xticks([])
-    ax.set_yticks([])
-
-    # Parametri del warehouse (valori fissi per evitare errori)
-    width = 30
-    height = 30
-    num_unloading = 2
-    num_loading = 2
+    solara.Button("Avanza", on_click=on_next_step)
 
 
-    # Disegna i rack (grigio)
-    block_size = 10
-    spacing = 3
-    start_x = 3
-    start_y = 4
-
-    # Posizioni dei 4 blocchi
-    block_origins = [
-        (start_x, start_y + block_size + spacing),  # Top-left
-        (start_x + block_size + spacing, start_y + block_size + spacing),  # Top-right
-        (start_x, start_y),  # Bottom-left
-        (start_x + block_size + spacing, start_y)  # Bottom-right
-    ]
-
-    for origin_x, origin_y in block_origins:
-        for dx in range(block_size):
-            for dy in range(block_size):
-                if dy % 2 == 0:
-                    x = origin_x + dx
-                    y = origin_y + dy
-                    if x < width and y < height:
-                        rect = patches.Rectangle((x - 0.5, y - 0.5), 1, 1,
-                                                 linewidth=1, edgecolor='black',
-                                                 facecolor='gray', alpha=0.5, zorder=0)
-                        ax.add_patch(rect)
+#Routing
+routes = [
+    solara.Route(path="/", component=SetupPage),
+    solara.Route(path="magazzino", component=SimulationPage),
+]
 
 
-def post_process_lines(ax):
-    ax.legend(loc="center left", bbox_to_anchor=(1, 0.9))
-
-space_component = make_space_component(
-    forkLiftportrayal, draw_grid=False, post_process=post_process_space
-)
-
-# Variabili reattive globali (se necessarie per implementazioni future)
-# num_unloading = solara.reactive(2)
-# num_loading = solara.reactive(2)
-# model = solara.reactive(None)
-# tick = solara.reactive(0)
-
-simulator = ABMSimulator()
-model = WarehouseModel(simulator=simulator)
-
-page = SolaraViz(
-    model,
-    components=[space_component, CommandConsole],
-    model_params=model_params,
-    name="Warehouse",
-    simulator=simulator,
-)
-page  # noqa
+@solara.component
+def Page():
+    solara.RouteBrowser(routes=routes)
