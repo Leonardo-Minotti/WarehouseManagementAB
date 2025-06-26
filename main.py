@@ -45,9 +45,8 @@ def forkLiftportrayal(agent):
 def warehouse_status_component(model):
     """Componente personalizzato per mostrare lo stato dei dock e della coda"""
 
-    # Crea il contenuto HTML per i dock
-    docks_info = []
-
+    # Crea il contenuto per i dock di carico
+    loading_docks_info = []
     for i, dock in enumerate(model.loading_docks, 1):
         if dock.current_order is not None:
             # Dock occupato - mostra i colori dell'ordine
@@ -57,37 +56,87 @@ def warehouse_status_component(model):
                     colors_info.append(f"{color.value.capitalize()}: {quantity}")
 
             colors_text = ", ".join(colors_info)
-            dock_status = f"**Dock {i}:** {colors_text} (Totale: {dock.current_order.get_capacita_totale()})"
+            dock_status = f"**Dock Carico {i}:** {colors_text} (Totale: {dock.current_order.get_capacita_totale()})\n"
         else:
             # Dock libero
-            dock_status = f"**Dock {i}:** Libero"
+            dock_status = f"**Dock Carico {i}:** Libero \n"
 
-        docks_info.append(dock_status)
+        loading_docks_info.append(dock_status)
 
-    # Crea il contenuto HTML per la coda
-    queue_info = []
-    if model.order_queue:
-        queue_info.append(f"**Ordini in coda:**")
-        for i, order in enumerate(model.order_queue, 1):
-            queue_info.append(f" {order.get_capacita_totale()},")
+    # Crea il contenuto per i dock di scarico
+    unloading_docks_info = []
+    for i, dock in enumerate(model.unloading_docks, 1):
+        if dock.current_order is not None:
+            # Dock occupato - mostra i colori dell'ordine
+            colors_info = []
+            for color, quantity in dock.current_order.get_tutte_capacita().items():
+                if quantity > 0:  # Mostra solo i colori con quantità > 0
+                    colors_info.append(f"{color.value.capitalize()}: {quantity}")
+
+            colors_text = ", ".join(colors_info)
+            dock_status = f"**Dock Scarico {i}:** {colors_text} (Totale: {dock.current_order.get_capacita_totale()})\n"
+        else:
+            # Dock libero
+            dock_status = f"**Dock Scarico {i}:** Libero \n"
+
+        unloading_docks_info.append(dock_status)
+
+    # Crea il contenuto per la coda di carico
+    loading_queue_info = []
+    if hasattr(model, 'loading_order_queue') and model.loading_order_queue:
+        loading_queue_info.append(f"**Ordini di carico in coda:**")
+        for i, order in enumerate(model.loading_order_queue, 1):
+            loading_queue_info.append(f" {order.get_capacita_totale()},")
     else:
-        queue_info.append("**Ordini in coda:** Nessun ordine in attesa")
+        loading_queue_info.append("**Ordini di carico in coda:** Nessun ordine in attesa")
+
+    # Crea il contenuto per la coda di scarico
+    unloading_queue_info = []
+    if hasattr(model, 'unloading_order_queue') and model.unloading_order_queue:
+        unloading_queue_info.append(f"**Ordini di scarico in coda:**")
+        for i, order in enumerate(model.unloading_order_queue, 1):
+            unloading_queue_info.append(f" {order.get_capacita_totale()},")
+    else:
+        unloading_queue_info.append("**Ordini di scarico in coda:** Nessun ordine in attesa")
 
     # Combina tutto il contenuto
     content = []
     content.append("## 📦 Stato Warehouse")
+
     content.append("### 🚛 Dock di Carico")
-    content.extend(docks_info)
+    content.extend(loading_docks_info)
     content.append("")  # Riga vuota
-    content.extend(queue_info)
+    content.extend(loading_queue_info)
+
+    content.append("")  # Riga vuota
+    content.append("### 📤 Dock di Scarico")
+    content.extend(unloading_docks_info)
+    content.append("")  # Riga vuota
+    content.extend(unloading_queue_info)
 
     # Aggiungi statistiche generali
     content.append("")
     content.append("### 📊 Statistiche")
-    free_docks = sum(1 for dock in model.loading_docks if dock.free)
-    content.append(f"**Dock liberi:** {free_docks}/{len(model.loading_docks)}")
+    free_loading_docks = sum(1 for dock in model.loading_docks if dock.free)
+    content.append(f"**Dock di carico liberi:** {free_loading_docks}/{len(model.loading_docks)}")
+
+    if hasattr(model, 'unloading_docks'):
+        free_unloading_docks = sum(1 for dock in model.unloading_docks if dock.free)
+        content.append(f"**Dock di scarico liberi:** {free_unloading_docks}/{len(model.unloading_docks)}")
+
     content.append(f"**Step corrente:** {model.step_counter}")
-    content.append(f"**Prossimo ordine tra:** {model.order_time - (model.step_counter - model.last_order_step)} step")
+
+    # Gestisci i contatori per la compatibilità
+    if hasattr(model, 'last_loading_order_step'):
+        next_loading_order = model.order_time - (model.step_counter - model.last_loading_order_step)
+        content.append(f"**Prossimo ordine carico tra:** {next_loading_order} step")
+    else:
+        next_order = model.order_time - (model.step_counter - model.last_order_step)
+        content.append(f"**Prossimo ordine tra:** {next_order} step")
+
+    if hasattr(model, 'last_unloading_order_step') and hasattr(model, 'unloading_order_time'):
+        next_unloading_order = model.unloading_order_time - (model.step_counter - model.last_unloading_order_step)
+        content.append(f"**Prossimo ordine scarico tra:** {next_unloading_order} step")
 
     return solara.Markdown("\n".join(content))
 
@@ -112,7 +161,6 @@ def post_process_space(ax):
     height = 30
     num_unloading = 2
     num_loading = 2
-
 
     # Disegna i rack (grigio)
     block_size = 10
@@ -144,22 +192,17 @@ def post_process_space(ax):
 def post_process_lines(ax):
     ax.legend(loc="center left", bbox_to_anchor=(1, 0.9))
 
+
 space_component = make_space_component(
     forkLiftportrayal, draw_grid=False, post_process=post_process_space
 )
-
-# Variabili reattive globali (se necessarie per implementazioni future)
-# num_unloading = solara.reactive(2)
-# num_loading = solara.reactive(2)
-# model = solara.reactive(None)
-# tick = solara.reactive(0)
 
 simulator = ABMSimulator()
 model = WarehouseModel(simulator=simulator)
 
 page = SolaraViz(
     model,
-    components=[space_component,warehouse_status_component, CommandConsole],
+    components=[space_component, warehouse_status_component, CommandConsole],
     model_params=model_params,
     name="Warehouse",
     simulator=simulator,
