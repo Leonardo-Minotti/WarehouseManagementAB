@@ -3,7 +3,7 @@ from matplotlib import patches
 from mesa.visualization import SolaraViz, make_plot_component
 
 from dock import Dock, UnloadingDock, LoadingDock
-from forkLift import ForkLift
+from forkLift import ForkLift, UnloadingForkLift, LoadingForkLift
 from warehouse_model import WarehouseModel
 from mesa.experimental.devs import ABMSimulator
 from mesa.visualization import (
@@ -23,8 +23,12 @@ def forkLiftportrayal(agent):
         "size": 10,
     }
 
-    if isinstance(agent, ForkLift):
+    if isinstance(agent, UnloadingForkLift):
         portrayal["color"] = "tab:red"
+        portrayal["marker"] = "o"
+        portrayal["zorder"] = 3
+    elif isinstance(agent, LoadingForkLift):
+        portrayal["color"] = "tab:orange"
         portrayal["marker"] = "o"
         portrayal["zorder"] = 3
     elif isinstance(agent, UnloadingDock):
