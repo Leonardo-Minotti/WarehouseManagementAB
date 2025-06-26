@@ -13,6 +13,7 @@ class ForkLift(CellAgent):
         super().__init__(model)
         self.free = free
 
+class UnloadingForkLift(ForkLift):
     def step(self):
         # Recupera la posizione attuale
         current_pos = self.pos  # (x, y)
@@ -24,6 +25,34 @@ class ForkLift(CellAgent):
 
         # Verifica se nuova posizione è dentro la griglia
         if new_x < 0:
+            return  # Blocca se uscirebbe fuori dalla griglia
+
+        # Verifica se la nuova posizione contiene un rack
+        if self.model.is_rack_position(new_pos):
+            return  # Muletto bloccato dal rack
+
+        # Recupera il contenuto della cella di destinazione per altri ostacoli
+        cellmates = self.model.grid.get_cell_list_contents(new_pos)
+
+        # Se trova un altro agente (es. un altro muletto) resta fermo
+        if len(cellmates) > 0:
+            return  # Muletto bloccato da altro agente
+
+        # Altrimenti effettua lo spostamento
+        self.model.grid.move_agent(self, new_pos)
+
+class LoadingForkLift(ForkLift):
+    def step(self):
+        # Recupera la posizione attuale
+        current_pos = self.pos  # (x, y)
+        x, y = current_pos
+
+        # Calcola la posizione a sinistra
+        new_y = y + 1
+        new_pos = (x, new_y)
+
+        # Verifica se nuova posizione è dentro la griglia
+        if new_y < 0:
             return  # Blocca se uscirebbe fuori dalla griglia
 
         # Verifica se la nuova posizione contiene un rack
