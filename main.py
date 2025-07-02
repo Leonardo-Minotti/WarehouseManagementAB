@@ -154,12 +154,6 @@ def post_process_space(ax):
     ax.set_xticks([])
     ax.set_yticks([])
 
-    # Parametri del warehouse (valori fissi per evitare errori)
-    width = 30
-    height = 30
-    num_unloading = 2
-    num_loading = 2
-
     # Colori per i tipi di scaffali
     color_map = {
         "blue": "blue",
@@ -169,10 +163,8 @@ def post_process_space(ax):
         "orange": "orange"
     }
 
-    # Disegna gli scaffali dal modello
-    # Nota: dovrai passare il modello a questa funzione o accedervi in altro modo
-    # Per ora, ricreiamo la logica degli scaffali
 
+    # Per ora, manteniamo la logica esistente ma con valori di esempio
     block_size = 10
     spacing = 3
     start_x = 3
@@ -192,13 +184,21 @@ def post_process_space(ax):
             else:
                 color = "green"
 
-            if x < 30 and y < 30:  # Assuming 30x30 grid
+            if x < 30 and y < 30:
                 rect = patches.Rectangle((x - 0.45, y - 0.45), 0.92, 0.92,
                                          linewidth=1, edgecolor='black',
                                          facecolor=color, alpha=0.7, zorder=1)
                 ax.add_patch(rect)
 
-        # Secondo blocco
+                occupazione = 14
+                display_text = f"{occupazione}"
+
+                ax.text(x, y, display_text,
+                        ha='center', va='center',
+                        fontsize=5.3, fontweight='bold',
+                        color='black', zorder=2)
+
+    # Secondo blocco
     origin_x, origin_y = start_x + block_size + spacing, start_y + block_size + spacing
     for dx in range(block_size):
         for dy in range(0, block_size, 2):
@@ -212,11 +212,20 @@ def post_process_space(ax):
             else:
                 color = "green"
 
-            if x < 30 and y < 30:  # Assuming 30x30 grid
+            if x < 30 and y < 30:
                 rect = patches.Rectangle((x - 0.45, y - 0.45), 0.92, 0.92,
-                                            linewidth=1, edgecolor='black',
-                                            facecolor=color, alpha=0.7, zorder=1)
+                                         linewidth=1, edgecolor='black',
+                                         facecolor=color, alpha=0.7, zorder=1)
                 ax.add_patch(rect)
+
+                occupazione = 14
+                display_text = f"{occupazione}"
+
+                ax.text(x, y, display_text,
+                        ha='center', va='center',
+                        fontsize=5.3, fontweight='bold',
+                        color='black', zorder=2)
+
     # Terzo blocco
     origin_x, origin_y = start_x, start_y
     for dx in range(block_size):
@@ -237,6 +246,14 @@ def post_process_space(ax):
                                          facecolor=color, alpha=0.7, zorder=1)
                 ax.add_patch(rect)
 
+                occupazione = 14
+                display_text = f"{occupazione}"
+
+                ax.text(x, y, display_text,
+                        ha='center', va='center',
+                        fontsize=5.3, fontweight='bold',
+                        color='black', zorder=2)
+
     # Quarto blocco
     origin_x, origin_y = start_x + block_size + spacing, start_y
     for dx in range(block_size):
@@ -256,6 +273,17 @@ def post_process_space(ax):
                                          linewidth=1, edgecolor='black',
                                          facecolor=color, alpha=0.7, zorder=1)
                 ax.add_patch(rect)
+
+
+                occupazione = 14
+                display_text = f"{occupazione}"
+
+                ax.text(x, y, display_text,
+                        ha='center', va='center',
+                        fontsize=5.3, fontweight='bold',
+                        color='black', zorder=2)
+
+
 
 def post_process_lines(ax):
     ax.legend(loc="center left", bbox_to_anchor=(1, 0.9))

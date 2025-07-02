@@ -10,6 +10,7 @@ from forkLift import ForkLift, UnloadingForkLift, LoadingForkLift
 from mesa.experimental.devs import ABMSimulator
 from dock import Dock, UnloadingDock, LoadingDock
 from order import Order
+from rack import Rack
 
 
 class WarehouseModel(Model):
@@ -64,7 +65,7 @@ class WarehouseModel(Model):
         self._create_layout(num_unloading, num_loading, num_unloading_forkLift, num_loading_forkLift)
 
     def _create_shelves(self):
-        """Crea gli scaffali con colori diversi secondo le specifiche"""
+        """Crea gli scaffali usando la classe Rack"""
         block_size = 10
         spacing = 3
         start_x = 3
@@ -85,12 +86,13 @@ class WarehouseModel(Model):
                     shelf_type = "green"
 
                 if x < self.width and y < self.height:
-                    self.shelves[(x, y)] = {
-                        "type": shelf_type,
-                        "occupancy": 0,
-                        "max_capacity": 100,
-                        "occupancy_percentage": 0.0
-                    }
+                    # Crea un nuovo oggetto Rack
+                    nuovo_rack = Rack(capienza=100, colore=shelf_type)
+                    # Imposta un'occupazione casuale per test
+                    import random
+                    nuovo_rack.set_occupazione_corrente(random.randint(0, 100))
+                    self.shelves[(x, y)] = nuovo_rack
+
         # Secondo blocco
         origin_x, origin_y = start_x + block_size + spacing, start_y + block_size + spacing
         for dx in range(block_size):
@@ -106,33 +108,30 @@ class WarehouseModel(Model):
                     shelf_type = "green"
 
                 if x < self.width and y < self.height:
-                    self.shelves[(x, y)] = {
-                        "type": shelf_type,
-                        "occupancy": 0,
-                        "max_capacity": 100,
-                        "occupancy_percentage": 0.0
-                    }
-        # Terzo blocco (bottom-left): prima riga verde, 2a-3a riga gialla, 4a-5a riga arancio
+                    nuovo_rack = Rack(capienza=100, colore=shelf_type)
+                    import random
+                    nuovo_rack.set_occupazione_corrente(random.randint(0, 100))
+                    self.shelves[(x, y)] = nuovo_rack
+
+        # Terzo blocco (bottom-left)
         origin_x, origin_y = start_x, start_y
         for dx in range(block_size):
             for dy in range(0, block_size, 2):  # Solo righe pari
                 x = origin_x + dx
                 y = origin_y + dy
 
-                if dy < 4:  # Prima riga
-                    shelf_type = "green"
+                if dy < 4:  # Prime 2 righe
+                    shelf_type = "orange"
                 elif dy < 8:  # 2a e 3a riga
                     shelf_type = "yellow"
                 else:  # 4a e 5a riga
                     shelf_type = "blue"
 
                 if x < self.width and y < self.height:
-                    self.shelves[(x, y)] = {
-                        "type": shelf_type,
-                        "occupancy": 0,
-                        "max_capacity": 100,
-                        "occupancy_percentage": 0.0
-                    }
+                    nuovo_rack = Rack(capienza=100, colore=shelf_type)
+                    import random
+                    nuovo_rack.set_occupazione_corrente(random.randint(0, 100))
+                    self.shelves[(x, y)] = nuovo_rack
 
         # Quarto blocco
         origin_x, origin_y = start_x + block_size + spacing, start_y
@@ -141,20 +140,18 @@ class WarehouseModel(Model):
                 x = origin_x + dx
                 y = origin_y + dy
 
-                if dy < 4:  # Prima riga
-                    shelf_type = "green"
+                if dy < 4:  # Prime 2 righe
+                    shelf_type = "orange"
                 elif dy < 8:  # 2a e 3a riga
                     shelf_type = "yellow"
                 else:  # 4a e 5a riga
                     shelf_type = "blue"
 
                 if x < self.width and y < self.height:
-                    self.shelves[(x, y)] = {
-                        "type": shelf_type,
-                        "occupancy": 0,
-                        "max_capacity": 100,
-                        "occupancy_percentage": 0.0
-                }
+                    nuovo_rack = Rack(capienza=15, colore=shelf_type)
+                    nuovo_rack.set_occupazione_corrente(14)
+                    self.shelves[(x, y)] = nuovo_rack
+
 
     def add_items_to_shelf(self, pos, quantity):
         """Aggiunge items allo scaffale in posizione pos"""
