@@ -16,17 +16,18 @@ from rack import Rack
 class WarehouseModel(Model):
 
     def __init__(
-        self,
-        width=30,
-        height=30,
-        num_unloading=2,
-        num_loading=2,
-        dock_capacity=10,
-        order_time=10,
-        unloading_order_time=15,  # Tempo per generare ordini di scarico
-        num_unloading_forkLift=1,
-        num_loading_forkLift=1,
-        simulator: ABMSimulator = None,
+            self,
+            width=30,
+            height=30,
+            num_unloading=2,
+            num_loading=2,
+            dock_capacity=10,
+            order_time=10,
+            unloading_order_time=15,  # Tempo per generare ordini di scarico
+            num_unloading_forkLift=1,
+            num_loading_forkLift=1,
+            initial_warehouse_filling=50,  # Percentuale di riempimento iniziale
+            simulator: ABMSimulator = None,
     ):
 
         super().__init__()
@@ -40,6 +41,7 @@ class WarehouseModel(Model):
         self.dock_capacity = dock_capacity
         self.order_time = order_time
         self.unloading_order_time = unloading_order_time
+        self.initial_warehouse_filling = initial_warehouse_filling
 
         # Code per gli ordini in attesa
         self.loading_order_queue = deque()  # Coda per ordini di carico
@@ -59,17 +61,20 @@ class WarehouseModel(Model):
         self.grid = MultiGrid(width, height, torus=False)
 
         # Dizionario per tenere traccia degli scaffali
-        self.shelves = {}  # {(x, y): {"type": "blue", "occupancy": 0, "max_capacity": 100}}
+        self.shelves = {}  # {(x, y): Rack}
 
         self._create_shelves()
         self._create_layout(num_unloading, num_loading, num_unloading_forkLift, num_loading_forkLift)
 
     def _create_shelves(self):
-        """Crea gli scaffali usando la classe Rack"""
+        """Crea gli scaffali usando la classe Rack e li riempie secondo la percentuale globale"""
         block_size = 10
         spacing = 3
         start_x = 3
         start_y = 4
+
+        # Lista temporanea per tenere traccia di tutte le posizioni dei rack
+        all_rack_positions = []
 
         # Primo blocco (top-left)
         origin_x, origin_y = start_x, start_y + block_size + spacing
@@ -86,12 +91,9 @@ class WarehouseModel(Model):
                     shelf_type = "green"
 
                 if x < self.width and y < self.height:
-                    # Crea un nuovo oggetto Rack
-                    nuovo_rack = Rack(capienza=100, colore=shelf_type)
-                    # Imposta un'occupazione casuale per test
-                    import random
-                    nuovo_rack.set_occupazione_corrente(random.randint(0, 100))
+                    nuovo_rack = Rack(capienza=15, colore=shelf_type)
                     self.shelves[(x, y)] = nuovo_rack
+                    all_rack_positions.append((x, y))
 
         # Secondo blocco
         origin_x, origin_y = start_x + block_size + spacing, start_y + block_size + spacing
@@ -108,10 +110,9 @@ class WarehouseModel(Model):
                     shelf_type = "green"
 
                 if x < self.width and y < self.height:
-                    nuovo_rack = Rack(capienza=100, colore=shelf_type)
-                    import random
-                    nuovo_rack.set_occupazione_corrente(random.randint(0, 100))
+                    nuovo_rack = Rack(capienza=15, colore=shelf_type)
                     self.shelves[(x, y)] = nuovo_rack
+                    all_rack_positions.append((x, y))
 
         # Terzo blocco (bottom-left)
         origin_x, origin_y = start_x, start_y
@@ -128,10 +129,9 @@ class WarehouseModel(Model):
                     shelf_type = "blue"
 
                 if x < self.width and y < self.height:
-                    nuovo_rack = Rack(capienza=100, colore=shelf_type)
-                    import random
-                    nuovo_rack.set_occupazione_corrente(random.randint(0, 100))
+                    nuovo_rack = Rack(capienza=15, colore=shelf_type)
                     self.shelves[(x, y)] = nuovo_rack
+                    all_rack_positions.append((x, y))
 
         # Quarto blocco
         origin_x, origin_y = start_x + block_size + spacing, start_y
@@ -149,28 +149,77 @@ class WarehouseModel(Model):
 
                 if x < self.width and y < self.height:
                     nuovo_rack = Rack(capienza=15, colore=shelf_type)
-                    nuovo_rack.set_occupazione_corrente(14)
                     self.shelves[(x, y)] = nuovo_rack
+                    all_rack_positions.append((x, y))
 
+        # Ora riempi i rack secondo la percentuale globale
+        self._fill_warehouse_by_percentage(all_rack_positions)
+
+    def _fill_warehouse_by_percentage(self, all_positions):
+        """Riempie il magazzino: prima riempie completamente i rack, poi parzialmente l'ultimo se necessario"""
+        # Calcola la capacità totale del magazzino
+        total_capacity = len(all_positions) * 15  # Ogni rack ha capacità 15
+
+        # Calcola il numero totale di items da distribuire
+        total_items_to_place = int((self.initial_warehouse_filling / 100) * total_capacity)
+
+        print(f"Magazzino: {len(all_positions)} rack, capacità totale: {total_capacity}")
+        print(f"Percentuale: {self.initial_warehouse_filling}%, items da piazzare: {total_items_to_place}")
+
+        # Mescola casualmente le posizioni per una distribuzione random
+        random.shuffle(all_positions)
+
+        # FASE 1: Calcola quanti rack riempire completamente e quanti items rimangono
+        rack_completi = total_items_to_place // 15  # Divisione intera
+        items_rimanenti = total_items_to_place % 15  # Resto della divisione
+
+        print(f"Strategia: {rack_completi} rack completi (15 items) + 1 rack parziale ({items_rimanenti} items)")
+
+        items_placed = 0
+
+        # FASE 2: Riempi completamente i primi rack_completi
+        for i in range(min(rack_completi, len(all_positions))):
+            pos = all_positions[i]
+            rack = self.shelves[pos]
+            rack.set_occupazione_corrente(15)
+            items_placed += 15
+
+        # FASE 3: Se ci sono items rimanenti, riempi parzialmente il prossimo rack
+        if items_rimanenti > 0 and rack_completi < len(all_positions):
+            pos = all_positions[rack_completi]  # Il rack successivo a quelli completi
+            rack = self.shelves[pos]
+            rack.set_occupazione_corrente(items_rimanenti)
+            items_placed += items_rimanenti
+
+        print(f"Items piazzati: {items_placed}")
+
+        # Statistiche finali per debug
+        rack_distribution = {}
+        for pos in all_positions:
+            occupancy = self.shelves[pos].get_occupazione_corrente()
+            rack_distribution[occupancy] = rack_distribution.get(occupancy, 0) + 1
+
+        print("Distribuzione rack per occupazione:")
+        for occupancy, count in sorted(rack_distribution.items()):
+            if count > 0:  # Mostra solo i valori con count > 0
+                print(f"  {occupancy} items: {count} rack")
+
+    def _fill_racks_randomly(self):
+        """Metodo deprecato - ora usiamo _fill_warehouse_by_percentage"""
+        pass
 
     def add_items_to_shelf(self, pos, quantity):
         """Aggiunge items allo scaffale in posizione pos"""
         if pos in self.shelves:
-            shelf = self.shelves[pos]
-            if shelf["occupancy"] + quantity <= shelf["max_capacity"]:
-                shelf["occupancy"] += quantity
-                shelf["occupancy_percentage"] = (shelf["occupancy"] / shelf["max_capacity"]) * 100
-                return True
+            rack = self.shelves[pos]
+            return rack.aggiungi_items(quantity)
         return False
 
     def remove_items_from_shelf(self, pos, quantity):
         """Rimuove items dallo scaffale in posizione pos"""
         if pos in self.shelves:
-            shelf = self.shelves[pos]
-            if shelf["occupancy"] >= quantity:
-                shelf["occupancy"] -= quantity
-                shelf["occupancy_percentage"] = (shelf["occupancy"] / shelf["max_capacity"]) * 100
-                return True
+            rack = self.shelves[pos]
+            return rack.rimuovi_items(quantity)
         return False
 
     def get_shelf_info(self, pos):
@@ -266,7 +315,6 @@ class WarehouseModel(Model):
             self.unloading_order_queue.remove(order)
             print(f"Ordine di scarico rimosso dalla coda e assegnato")
 
-    # Mantieni la compatibilità con il codice esistente
     @property
     def order_queue(self):
         """Mantiene compatibilità - restituisce la coda di carico"""
@@ -308,6 +356,20 @@ class WarehouseModel(Model):
 
         self.agents_by_type[UnloadingForkLift].shuffle_do("step")
         self.agents_by_type[LoadingForkLift].shuffle_do("step")
+
+    def get_warehouse_stats(self):
+        """Ritorna statistiche del magazzino"""
+        total_racks = len(self.shelves)
+        total_capacity = total_racks * 15
+        total_occupied = sum(rack.get_occupazione_corrente() for rack in self.shelves.values())
+        current_percentage = (total_occupied / total_capacity * 100) if total_capacity > 0 else 0
+
+        return {
+            "total_racks": total_racks,
+            "total_capacity": total_capacity,
+            "total_occupied": total_occupied,
+            "current_percentage": current_percentage
+        }
 
     def is_rack_position(self, pos):
         """Controlla se la posizione contiene un rack (deprecato, usa is_shelf_position)"""

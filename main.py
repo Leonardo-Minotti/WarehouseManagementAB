@@ -3,7 +3,7 @@ from matplotlib import patches
 from mesa.visualization import SolaraViz, make_plot_component
 
 from dock import Dock, UnloadingDock, LoadingDock
-from forkLift import ForkLift
+from forkLift import ForkLift, UnloadingForkLift, LoadingForkLift
 from warehouse_model import WarehouseModel
 from mesa.experimental.devs import ABMSimulator
 from mesa.visualization import (
@@ -14,6 +14,9 @@ from mesa.visualization import (
     make_space_component,
 )
 
+# Variabile globale per accedere al modello
+current_model = None
+
 
 def forkLiftportrayal(agent):
     if agent is None:
@@ -23,8 +26,12 @@ def forkLiftportrayal(agent):
         "size": 10,
     }
 
-    if isinstance(agent, ForkLift):
+    if isinstance(agent, UnloadingForkLift):
         portrayal["color"] = "tab:red"
+        portrayal["marker"] = "o"
+        portrayal["zorder"] = 3
+    elif isinstance(agent, LoadingForkLift):
+        portrayal["color"] = "tab:orange"
         portrayal["marker"] = "o"
         portrayal["zorder"] = 3
     elif isinstance(agent, UnloadingDock):
@@ -39,7 +46,8 @@ def forkLiftportrayal(agent):
 
 
 def warehouse_status_component(model):
-    """Componente personalizzato per mostrare lo stato dei dock e della coda"""
+    global current_model
+    current_model = model  # Aggiorna la variabile globale
 
     # Crea il contenuto per i dock di carico
     loading_docks_info = []
@@ -95,6 +103,9 @@ def warehouse_status_component(model):
     else:
         unloading_queue_info.append("**Ordini di scarico in coda:** Nessun ordine in attesa")
 
+    # Ottieni statistiche del magazzino
+    stats = model.get_warehouse_stats()
+
     # Combina tutto il contenuto
     content = []
     content.append("## 📦 Stato Warehouse")
@@ -145,26 +156,25 @@ model_params = {
     "dock_capacity": Slider("Maxinum dock capacity", 1, 5, 10),
     "order_time": Slider("Time order", 1, 10, 20),
     "num_unloading_forkLift": Slider("Number of unloading forkLifts", 1, 1, 10),
-    "num_loading_forkLift": Slider("Number of loading forkLifts", 1, 1, 10)
+    "num_loading_forkLift": Slider("Number of loading forkLifts", 1, 1, 10),
+    "initial_warehouse_filling": Slider("initial warehouse filling percentage", 1, 1, 100)
 }
 
 
 def post_process_space(ax):
+    global current_model
+
     ax.set_aspect("equal")
     ax.set_xticks([])
     ax.set_yticks([])
 
-    # Colori per i tipi di scaffali
-    color_map = {
-        "blue": "blue",
-        "red": "red",
-        "green": "green",
-        "yellow": "yellow",
-        "orange": "orange"
-    }
+    # Prova a ottenere il modello dall'assi se la variabile globale non è aggiornata
+    model_to_use = current_model
+    if hasattr(ax, 'figure') and hasattr(ax.figure, 'model'):
+        model_to_use = ax.figure.model
+    elif hasattr(ax, '_model'):
+        model_to_use = ax._model
 
-
-    # Per ora, manteniamo la logica esistente ma con valori di esempio
     block_size = 10
     spacing = 3
     start_x = 3
@@ -190,7 +200,12 @@ def post_process_space(ax):
                                          facecolor=color, alpha=0.7, zorder=1)
                 ax.add_patch(rect)
 
-                occupazione = 14
+                # Ottieni l'occupazione dal modello
+                occupazione = 0
+                if model_to_use and (x, y) in model_to_use.shelves:
+                    rack = model_to_use.shelves[(x, y)]
+                    occupazione = rack.get_occupazione_corrente()
+
                 display_text = f"{occupazione}"
 
                 ax.text(x, y, display_text,
@@ -218,7 +233,11 @@ def post_process_space(ax):
                                          facecolor=color, alpha=0.7, zorder=1)
                 ax.add_patch(rect)
 
-                occupazione = 14
+                occupazione = 0
+                if model_to_use and (x, y) in model_to_use.shelves:
+                    rack = model_to_use.shelves[(x, y)]
+                    occupazione = rack.get_occupazione_corrente()
+
                 display_text = f"{occupazione}"
 
                 ax.text(x, y, display_text,
@@ -246,7 +265,11 @@ def post_process_space(ax):
                                          facecolor=color, alpha=0.7, zorder=1)
                 ax.add_patch(rect)
 
-                occupazione = 14
+                occupazione = 0
+                if model_to_use and (x, y) in model_to_use.shelves:
+                    rack = model_to_use.shelves[(x, y)]
+                    occupazione = rack.get_occupazione_corrente()
+
                 display_text = f"{occupazione}"
 
                 ax.text(x, y, display_text,
@@ -274,8 +297,11 @@ def post_process_space(ax):
                                          facecolor=color, alpha=0.7, zorder=1)
                 ax.add_patch(rect)
 
+                occupazione = 0
+                if model_to_use and (x, y) in model_to_use.shelves:
+                    rack = model_to_use.shelves[(x, y)]
+                    occupazione = rack.get_occupazione_corrente()
 
-                occupazione = 14
                 display_text = f"{occupazione}"
 
                 ax.text(x, y, display_text,
@@ -284,20 +310,27 @@ def post_process_space(ax):
                         color='black', zorder=2)
 
 
+def custom_space_component(model):
+    """Componente spazio personalizzato che riceve il modello direttamente"""
+    global current_model
+    current_model = model  # Aggiorna la variabile globale quando questo componente viene chiamato
 
-def post_process_lines(ax):
-    ax.legend(loc="center left", bbox_to_anchor=(1, 0.9))
+    def post_process_with_model(ax):
+        ax._model = model  # Allega il modello all'asse
+        post_process_space(ax)
 
-space_component = make_space_component(
-    forkLiftportrayal, draw_grid=False, post_process=post_process_space
-)
+    return make_space_component(
+        forkLiftportrayal, draw_grid=False, post_process=post_process_with_model
+    )(model)
+
 
 simulator = ABMSimulator()
 model = WarehouseModel(simulator=simulator)
+current_model = model  # Inizializza la variabile globale
 
 page = SolaraViz(
     model,
-    components=[space_component, warehouse_status_component, CommandConsole],
+    components=[custom_space_component, warehouse_status_component, CommandConsole],
     model_params=model_params,
     name="Warehouse",
     simulator=simulator,
