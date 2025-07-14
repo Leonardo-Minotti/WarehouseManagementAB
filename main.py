@@ -309,6 +309,59 @@ def post_process_space(ax):
                         fontsize=5.3, fontweight='bold',
                         color='black', zorder=2)
 
+    # === TRACCE DEI MULETTI ===
+    # Disegna i percorsi che i muletti possono seguire
+
+    # Colore e stile delle tracce
+    track_color = 'gray'
+    track_width = 2
+    track_alpha = 0.6
+
+    # Corridoio orizzontale principale (tra i blocchi superiori e inferiori)
+    corridor_y = (start_y + block_size + spacing / 2) - 1
+    ax.plot([start_x - 2, model_to_use.width - 2], [corridor_y, corridor_y],
+            color=track_color, linewidth=track_width, alpha=track_alpha, zorder=0.5)
+
+    # Corridoio orizzontale alto
+    corridor_y = model_to_use.height - 2
+    ax.plot([start_x - 2, model_to_use.width - 2], [corridor_y, corridor_y],
+            color=track_color, linewidth=track_width, alpha=track_alpha, zorder=0.5)
+
+    # Corridoio orizzontale basso
+    corridor_y = start_y - 3
+    ax.plot([start_x - 2, model_to_use.width - 2], [corridor_y, corridor_y],
+            color=track_color, linewidth=track_width, alpha=track_alpha, zorder=0.5)
+
+    # Corridoi orizzontali all'interno dei blocchi
+    for dy in range(1, block_size, 2):  # Tracce tra le righe di rack
+        # Bloccchi superiori
+        corridor_y1 = start_y + block_size + spacing + dy
+        ax.plot([start_x - 2, model_to_use.width - 2], [corridor_y1, corridor_y1],
+                color=track_color, linewidth=1, alpha=track_alpha, zorder=0.5)
+
+        # Blocchi inferiori
+        corridor_y3 = start_y + dy
+        ax.plot([start_x - 2, model_to_use.width - 2], [corridor_y3, corridor_y3],
+                color=track_color, linewidth=1, alpha=track_alpha, zorder=0.5)
+
+
+    # Corridoio verticale centrale (tra i blocchi sinistri e destri)
+    corridor_x = start_x + block_size + spacing / 2
+    ax.plot([corridor_x, corridor_x], [start_y - 3, model_to_use.height - 2],
+            color=track_color, linewidth=track_width, alpha=track_alpha, zorder=0.5)
+
+    # Corridoio verticale a sinistra
+    corridor_x = start_x - 2
+    ax.plot([corridor_x, corridor_x], [start_y - 3, model_to_use.height - 2],
+            color=track_color, linewidth=track_width, alpha=track_alpha, zorder=0.5)
+
+    # Corridoio verticale a destra
+    corridor_x = model_to_use.width - 2
+    ax.plot([corridor_x, corridor_x], [start_y - 3, model_to_use.height - 2],
+            color=track_color, linewidth=track_width, alpha=track_alpha, zorder=0.5)
+
+    #FINE DISCEGNO TRACCE
+
 
 def custom_space_component(model):
     """Componente spazio personalizzato che riceve il modello direttamente"""

@@ -62,8 +62,9 @@ class WarehouseModel(Model):
 
         # Dizionario per tenere traccia degli scaffali
         self.shelves = {}  # {(x, y): Rack}
-
         self._create_shelves()
+
+
         self._create_layout(num_unloading, num_loading, num_unloading_forkLift, num_loading_forkLift)
 
     def _create_shelves(self):
@@ -243,7 +244,7 @@ class WarehouseModel(Model):
         # Posizionamento muletti nelle zone di carico
         for x in range(num_loading_forkLift):
             loading_forklift = LoadingForkLift(self)
-            self.grid.place_agent(loading_forklift, (x, 1))
+            self.grid.place_agent(loading_forklift, (x + 1, 1))
 
         # Posizionamento dock scarico
         center_y = self.grid.height // 2
@@ -259,7 +260,7 @@ class WarehouseModel(Model):
         for x in range(num_loading):
             loading_dock = LoadingDock(self)
             self.loading_docks.append(loading_dock)
-            self.grid.place_agent(loading_dock, (x, 0))
+            self.grid.place_agent(loading_dock, (x + 1, 0))
 
     def generate_loading_order(self):
         """Genera un nuovo ordine di carico con capacità casuale"""
