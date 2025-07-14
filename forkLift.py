@@ -1,4 +1,7 @@
 # forkLift.py
+from random import choice
+
+from debugpy.server.cli import set_target
 from mesa.agent import Agent
 from mesa.discrete_space import CellAgent, FixedAgent
 from pathfindingA import find_path
@@ -20,64 +23,17 @@ class ForkLift(CellAgent):
         """Imposta una nuova destinazione e calcola il percorso"""
         self.target_position = target_pos
         self.current_path = find_path(self.model, self.pos, target_pos)
+        print(f"[DEBUG] Percorso calcolato da {self.pos} a {target_pos}: {self.current_path}")
 
-    def move_along_path(self):
-        """Muoviti lungo il percorso calcolato"""
-        if not self.current_path or len(self.current_path) <= 1:
-            return
-
-        # Prendi il prossimo passo nel percorso
-        next_pos = self.current_path[1]
-
-        # Muoviti semplicemente senza controlli di collisione
-        self.model.grid.move_agent(self, next_pos)
-        self.current_path.pop(0)
-
-        # Se hai raggiunto la destinazione
-        if self.pos == self.target_position:
-            self.on_arrival()
-
-    def on_arrival(self):
-        """Chiamata quando il muletto raggiunge la destinazione"""
-        self.current_path = []
-        self.target_position = None
-        self.free = True
 
     def find_closest_track_to_rack(self, rack_pos: Tuple[int, int]) -> Optional[Tuple[int, int]]:
         """Trova la traccia più vicina a un rack"""
-        x, y = rack_pos
+        (x, y) = rack_pos
         adjacent_pos = (x, y + 1)
         return adjacent_pos
 
 
 class UnloadingForkLift(ForkLift):
-    def step(self):
-        if self.free:
-            # Cerca un ordine di scarico da processare
-            if hasattr(self.model, 'unloading_order_queue') and self.model.unloading_order_queue:
-                order = self.model.unloading_order_queue.pop(0)
-                self.current_order = order
-                self.free = False
-
-                # Trova il rack più vicino con spazio
-                target_rack = self.find_empty_rack()
-                if target_rack:
-                    self.set_target(target_rack)
-        else:
-            # Segui il percorso verso la destinazione
-            self.move_along_path()
-
-        def find_empty_rack(self):
-            """Trova un rack vuoto per lo scarico"""
-            for (x, y), rack in self.model.shelves.items():
-                if rack.get_occupazione_corrente() < rack.capacity:
-                    closest_track = self.find_closest_track_to_rack((x, y))
-                    if closest_track:
-                        return closest_track
-            return None
-
-
-class LoadingForkLift(ForkLift):
     def __init__(self, model, free=True):
         super().__init__(model, free)
         self.state = "IDLE"  # Stati: IDLE, GOING_TO_DOCK, LOADING, GOING_TO_RACK, UNLOADING
@@ -101,19 +57,53 @@ class LoadingForkLift(ForkLift):
         elif self.state == "UNLOADING":
             self.unload_items_to_rack()
 
+
     def look_for_dock_with_order(self):
-        """Cerca il primo dock con un ordine disponibile"""
+        """Cerca il primo dock con un ordine da scaricare"""
         for dock in self.model.unloading_docks:
-            if dock.current_order and not dock.is_being_served:
-                # Trova la traccia più vicina al dock
+            print(f"[DEBUG] Ordine al dock {dock.pos}: {dock.current_order}")
+            if dock.current_order is not None and not dock.is_being_served:
                 dock_track = self.find_closest_track_to_dock(dock.pos)
+
                 if dock_track:
                     self.current_dock = dock
-                    dock.is_being_served = True  # Marca il dock come servito
-                    self.set_target(dock_track)
-                    self.state = "GOING_TO_DOCK"
-                    print(f"LoadingForkLift: Andando al dock in {dock.pos}")
+                    dock.is_being_served = True
+
+                    if self.pos == dock_track:
+                        # Già davanti al dock → passa direttamente a LOADING
+                        self.state = "LOADING"
+                        print(f"[DEBUG] Muletto già davanti al dock {dock.pos}, passo direttamente a LOADING")
+                    else:
+                        # Muoviti verso il dock
+                        self.set_target(dock_track)
+                        self.state = "GOING_TO_DOCK"
+                        print(f"[DEBUG] Andando verso il dock in {dock.pos}")
                     break
+
+    def move_along_path(self):
+        """Muoviti lungo il percorso calcolato"""
+        if not self.current_path or len(self.current_path) <= 1:
+            self.on_arrival()
+            return
+
+
+        # Prendi il prossimo passo nel percorso
+        next_pos = self.current_path[1]
+
+        # Muoviti semplicemente senza controlli di collisione
+        self.model.grid.move_agent(self, next_pos)
+        self.current_path.pop(0)
+
+        # Se hai raggiunto la destinazione
+        if self.pos == self.target_position:
+            self.on_arrival()
+
+    def on_arrival(self):
+        """Chiamata quando il muletto raggiunge la destinazione"""
+        self.current_path = []
+        self.target_position = None
+        if self.state == "GOING_TO_DOCK":
+            self.state = "LOADING"
 
     def find_closest_track_to_dock(self, dock_pos):
         """Trova la traccia più vicina a un dock"""
@@ -126,30 +116,55 @@ class LoadingForkLift(ForkLift):
         return None
 
     def load_items_from_dock(self):
-        """Carica gli items dal dock"""
-        if self.current_dock and self.current_dock.current_order:
-            # Simula il caricamento (prende tutti gli items dell'ordine)
-            self.carried_items = self.current_dock.current_order.capacity
+        """Carica un solo elemento (di un colore casuale disponibile) dall'ordine del dock"""
+        ordine = self.current_dock.current_order
 
-            # Completa l'ordine e libera il dock
-            self.current_dock.complete_order()
+        # Trova tutti i colori con almeno 1 unità disponibile
+        colori_disponibili = [colore for colore, qty in ordine.get_tutte_capacita().items() if qty > 0]
+
+        if not colori_disponibili:
+            # Ordine completato
+            print(f"[INFO] Ordine completato al dock {self.current_dock.pos}")
+            self.current_dock.current_order = None
             self.current_dock.is_being_served = False
+            self.state = "IDLE"
+            return
 
-            print(f"LoadingForkLift: Caricati {self.carried_items} items dal dock")
+        # Scegli un colore casuale tra quelli disponibili
+        colore_scelto = choice(colori_disponibili)
+        colore = colore_scelto.value
+        quantita_corrente = ordine.get_capacita_per_colore(colore_scelto)
 
-            # Trova un rack per scaricare
-            target_rack = self.find_empty_rack()
-            if target_rack:
-                self.target_rack = target_rack
-                self.set_target(target_rack)
-                self.state = "GOING_TO_RACK"
-                print(f"LoadingForkLift: Andando al rack in {target_rack}")
-            else:
-                print("LoadingForkLift: Nessun rack disponibile!")
-                self.state = "IDLE"
-                self.carried_items = 0
+        # Decrementa di 1 la quantità per quel colore
+        ordine.set_capacita_per_colore(colore_scelto, quantita_corrente - 1)
 
-    def find_empty_rack(self):
+        print(f"[LOADING] Caricato 1 unità di {colore_scelto.value.upper()} dal dock {self.current_dock.pos}")
+        print(f"[LOADING] Capacità rimanente per {colore_scelto.value.upper()}: {quantita_corrente - 1}")
+        print(f"[LOADING] Capacità totale rimanente: {ordine.get_capacita_totale()}")
+        empty_rack_pos = self.find_empty_rack(colore)
+
+        self.set_target(empty_rack_pos)
+        # Passa alla fase successiva
+        self.state = "GOING_TO_RACK"
+
+    def find_empty_rack(self, color: str):
+        """Trova un rack con spazio disponibile per il colore dato, partendo da quello più a destra"""
+        # Ordina gli shelves per coordinata x decrescente (più a destra prima)
+
+        for (x, y), rack in self.model.shelves.items():
+            rack_color = rack.get_colore()  # supponiamo restituisca stringa o lista di stringhe
+            # Se è una singola stringa
+            if rack_color == color and rack.get_occupazione_corrente() < 15:
+                return (x, y)
+        return None
+
+
+class LoadingForkLift(ForkLift):
+    #DAFARE
+
+
+
+    def find_empty_rack(self, color):
         """Trova un rack con spazio disponibile"""
         for (x, y), rack in self.model.shelves.items():
             if rack.get_occupazione_corrente() < rack.capacity:

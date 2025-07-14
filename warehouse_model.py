@@ -256,9 +256,6 @@ class WarehouseModel(Model):
             if count > 0:  # Mostra solo i valori con count > 0
                 print(f"  {occupancy} items: {count} rack")
 
-    def _fill_racks_randomly(self):
-        """Metodo deprecato - ora usiamo _fill_warehouse_by_percentage"""
-        pass
 
     def add_items_to_shelf(self, pos, quantity):
         """Aggiunge items allo scaffale in posizione pos"""

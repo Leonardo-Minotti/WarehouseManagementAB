@@ -12,6 +12,8 @@ class Dock(FixedAgent):
     ):
         super().__init__(model)
         self.free = free
+        self.current_order = None
+        self.is_being_served = False
 
 
 class UnloadingDock(Dock):

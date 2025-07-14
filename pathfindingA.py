@@ -7,8 +7,7 @@ def heuristic(a: Tuple[int, int], b: Tuple[int, int]) -> int:
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
 
-def get_neighbors(self, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
-    """Ottieni i vicini navigabili di una posizione"""
+def get_neighbors(model, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
     x, y = pos
     neighbors = []
 
@@ -16,13 +15,13 @@ def get_neighbors(self, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
         new_x, new_y = x + dx, y + dy
         new_pos = (new_x, new_y)
 
-        # Verifica se la nuova posizione è dentro la griglia e navigabile
-        if (0 <= new_x < self.width and
-                0 <= new_y < self.height and
-                self.is_track_position(new_pos)):
+        if (0 <= new_x < model.width and
+            0 <= new_y < model.height and
+            model.is_track_position(new_pos)):
             neighbors.append(new_pos)
 
     return neighbors
+
 
 
 def find_path(model, start: Tuple[int, int], goal: Tuple[int, int]) -> Optional[List[Tuple[int, int]]]:

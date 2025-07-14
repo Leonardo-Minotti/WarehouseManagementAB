@@ -5,11 +5,11 @@ from typing import Dict
 
 class OrderColor(Enum):
     """Enum per rappresentare i 5 colori degli ordini"""
-    ROSSO = "rosso"
-    VERDE = "verde"
-    GIALLO = "giallo"
-    BLU = "blu"
-    ARANCIONE = "arancione"
+    ROSSO = "red"
+    VERDE = "green"
+    GIALLO = "yellow"
+    BLU = "blue"
+    ARANCIONE = "orange"
 
 
 class Order:
