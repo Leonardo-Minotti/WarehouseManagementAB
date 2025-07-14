@@ -63,6 +63,7 @@ class WarehouseModel(Model):
         # Dizionario per tenere traccia degli scaffali
         self.shelves = {}  # {(x, y): Rack}
         self._create_shelves()
+        self._create_track_system()
 
 
         self._create_layout(num_unloading, num_loading, num_unloading_forkLift, num_loading_forkLift)
@@ -155,6 +156,56 @@ class WarehouseModel(Model):
 
         # Ora riempi i rack secondo la percentuale globale
         self._fill_warehouse_by_percentage(all_rack_positions)
+
+    def _create_track_system(self):
+        """Crea il sistema di tracce navigabili per i muletti"""
+        self.tracks = set()  # Insieme delle posizioni navigabili
+
+        block_size = 10
+        spacing = 3
+        start_x = 3
+        start_y = 4
+
+        # Corridoio orizzontale principale
+        corridor_y = (start_y + block_size + spacing / 2) - 1
+        for x in range(1, self.width - 1):
+            self.tracks.add((x, int(corridor_y)))
+
+        # Corridoio verticale centrale
+        corridor_x = start_x + block_size + spacing / 2
+        for y in range(1, self.height - 1):
+            self.tracks.add((int(corridor_x), y))
+
+            # Corridoi orizzontali all'interno dei blocchi (spostati in alto di 2)
+            for dy in range(1, block_size, 2):  # Solo righe dispari (1, 3, 5, 7, 9)
+                # Blocchi superiori (entrambi: sinistro e destro) - spostati in alto di 2
+                corridor_y_upper = start_y + block_size + spacing + dy - 2
+                for x in range(1, self.width - 1):
+                    self.tracks.add((x, corridor_y_upper))
+
+                # Blocchi inferiori (entrambi: sinistro e destro) - spostati in alto di 2
+                corridor_y_lower = start_y + dy - 2
+                for x in range(1, self.width - 1):
+                    self.tracks.add((x, corridor_y_lower))
+
+            # Corridoi orizzontali esterni (alto e basso)
+            corridor_y_top = self.height - 2
+            corridor_y_bottom = start_y - 3
+            for x in range(1, self.width - 1):
+                self.tracks.add((x, corridor_y_top))
+                self.tracks.add((x, corridor_y_bottom))
+
+            # Corridoi verticali esterni (sinistro e destro)
+            corridor_x_left = start_x - 2
+            corridor_x_right = self.width - 2
+            for y in range(start_y - 3, self.height - 1):
+                self.tracks.add((corridor_x_left, y))
+                self.tracks.add((corridor_x_right, y))
+
+    def is_track_position(self, pos):
+        """Verifica se una posizione è una traccia navigabile"""
+        return pos in self.tracks
+
 
     def _fill_warehouse_by_percentage(self, all_positions):
         """Riempie il magazzino: prima riempie completamente i rack, poi parzialmente l'ultimo se necessario"""

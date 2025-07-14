@@ -24,11 +24,13 @@ class UnloadingDock(Dock):
         super().__init__(model)
         self.free = free
         self.current_order = None  # Aggiungo l'attributo per l'ordine corrente
+        self.is_being_served = False  # Aggiunta per tracciare se un muletto sta servendo questo dock
 
     def receive_order(self, order):
         if self.free:
             self.current_order = order
             self.free = False
+            self.is_being_served = False  # Aggiunta per tracciare se un muletto sta servendo questo dock
             return True
         else:
             return False
@@ -37,6 +39,7 @@ class UnloadingDock(Dock):
         completed_order = self.current_order
         self.current_order = None
         self.free = True
+        self.is_being_served = False  # Aggiunta per tracciare se un muletto sta servendo questo dock
         return completed_order
 
 
@@ -50,10 +53,13 @@ class LoadingDock(Dock):
         super().__init__(model)
         self.free = free
         self.current_order = None  # Aggiungo l'attributo per l'ordine corrente
+        self.is_being_served = False  # Aggiunta per tracciare se un muletto sta servendo questo dock
 
     def receive_order(self, order):
         if self.free:
             self.current_order = order
+            self.is_being_served = False  # Reset quando riceve un nuovo ordine
+
             self.free = False
             return True
         else:
@@ -62,5 +68,9 @@ class LoadingDock(Dock):
     def complete_order(self):
         completed_order = self.current_order
         self.current_order = None
+        print(f"LoadingDock in {self.pos}: Ordine completato")
+
+        self.is_being_served = False
+
         self.free = True
         return completed_order

@@ -318,7 +318,7 @@ def post_process_space(ax):
     track_alpha = 0.6
 
     # Corridoio orizzontale principale (tra i blocchi superiori e inferiori)
-    corridor_y = (start_y + block_size + spacing / 2) - 1
+    corridor_y = (start_y + block_size + spacing / 2) - 0.5
     ax.plot([start_x - 2, model_to_use.width - 2], [corridor_y, corridor_y],
             color=track_color, linewidth=track_width, alpha=track_alpha, zorder=0.5)
 
@@ -346,7 +346,7 @@ def post_process_space(ax):
 
 
     # Corridoio verticale centrale (tra i blocchi sinistri e destri)
-    corridor_x = start_x + block_size + spacing / 2
+    corridor_x = (start_x + block_size + spacing / 2) - 0.5
     ax.plot([corridor_x, corridor_x], [start_y - 3, model_to_use.height - 2],
             color=track_color, linewidth=track_width, alpha=track_alpha, zorder=0.5)
 
@@ -361,6 +361,31 @@ def post_process_space(ax):
             color=track_color, linewidth=track_width, alpha=track_alpha, zorder=0.5)
 
     #FINE DISCEGNO TRACCE
+
+
+    # === AGGIUNGI QUESTA SEZIONE PER I BORDI DELLE CELLE ===
+    # Disegna i bordi di tutte le celle della griglia
+    grid_color = 'red'
+    grid_alpha = 1
+    grid_linewidth = 0.5
+
+    # Linee verticali
+    for x in range(model_to_use.width + 1):
+        ax.plot([x - 0.5, x - 0.5], [-0.5, model_to_use.height - 0.5],
+                color=grid_color, linewidth=grid_linewidth, alpha=grid_alpha, zorder=0.1)
+
+    # Linee orizzontali
+    for y in range(model_to_use.height + 1):
+        ax.plot([-0.5, model_to_use.width - 0.5], [y - 0.5, y - 0.5],
+                color=grid_color, linewidth=grid_linewidth, alpha=grid_alpha, zorder=0.1)
+    # === FINE SEZIONE BORDI CELLE ===
+
+    block_size = 10
+    spacing = 3
+    start_x = 3
+    start_y = 4
+
+    #TODO : FINE GRIGLIA DA ELIMINARE
 
 
 def custom_space_component(model):
