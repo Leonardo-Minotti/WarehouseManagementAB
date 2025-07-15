@@ -101,9 +101,10 @@ class UnloadingForkLift(ForkLift):
     def on_arrival(self):
         """Chiamata quando il muletto raggiunge la destinazione"""
         self.current_path = []
-        self.target_position = None
         if self.state == "GOING_TO_DOCK":
             self.state = "LOADING"
+        if self.state == "GOING_TO_RACK":
+            self.state = "UNLOADING"
 
     def find_closest_track_to_dock(self, dock_pos):
         """Trova la traccia più vicina a un dock"""
@@ -155,8 +156,37 @@ class UnloadingForkLift(ForkLift):
             rack_color = rack.get_colore()  # supponiamo restituisca stringa o lista di stringhe
             # Se è una singola stringa
             if rack_color == color and rack.get_occupazione_corrente() < 15:
-                return (x, y)
+                return (x, y + 1)
         return None
+
+    def unload_items_to_rack(self):
+        """Scarica gli items nel rack"""
+        rack_pos = self.target_position
+        print(f"[LOADING] POSIZOINE {rack_pos}")
+        self.target_position = None
+        posizione = (rack_pos[0], rack_pos[1] - 1)
+        if posizione:
+            rack = self.model.shelves[posizione]
+            print(f"RACKK {posizione}")
+            # Aggiungi gli items al rack
+            rack.aggiungi_items(1)
+
+            self.carried_items -= 1
+            print(f"LoadingForkLift: Scaricati items nel rack {rack_pos}")
+
+                    # Se ha finito di scaricare, torna IDLE
+            if self.carried_items == 0:
+                self.state = "IDLE"
+                self.target_rack = None
+                self.current_dock = None
+                print("LoadingForkLift: Lavoro completato, torno IDLE")
+
+            else:
+                print("LoadingForkLift: Errore nello scarico nel rack")
+                self.state = "IDLE"
+                self.carried_items = 0
+
+
 
 
 class LoadingForkLift(ForkLift):
@@ -173,53 +203,7 @@ class LoadingForkLift(ForkLift):
                     return closest_track
         return None
 
-    def unload_items_to_rack(self):
-        """Scarica gli items nel rack"""
-        if self.target_rack and self.carried_items > 0:
-            # Trova il rack più vicino alla traccia corrente
-            rack_pos = self.find_rack_near_track(self.target_rack)
-            if rack_pos:
-                rack = self.model.shelves[rack_pos]
-                # Calcola quanti items può contenere il rack
-                space_available = rack.capacity - rack.get_occupazione_corrente()
-                items_to_unload = min(self.carried_items, space_available)
 
-                # Aggiungi gli items al rack
-                if rack.aggiungi_items(items_to_unload):
-                    self.carried_items -= items_to_unload
-                    print(f"LoadingForkLift: Scaricati {items_to_unload} items nel rack {rack_pos}")
-
-                    # Se ha finito di scaricare, torna IDLE
-                    if self.carried_items == 0:
-                        self.state = "IDLE"
-                        self.target_rack = None
-                        self.current_dock = None
-                        print("LoadingForkLift: Lavoro completato, torno IDLE")
-                    else:
-                        # Se ha ancora items, trova un altro rack
-                        target_rack = self.find_empty_rack()
-                        if target_rack:
-                            self.target_rack = target_rack
-                            self.set_target(target_rack)
-                            self.state = "GOING_TO_RACK"
-                        else:
-                            print("LoadingForkLift: Nessun rack disponibile per items rimanenti!")
-                            self.state = "IDLE"
-                            self.carried_items = 0
-                else:
-                    print("LoadingForkLift: Errore nello scarico nel rack")
-                    self.state = "IDLE"
-                    self.carried_items = 0
-
-    def find_rack_near_track(self, track_pos):
-        """Trova il rack più vicino a una traccia"""
-        x, y = track_pos
-        # Controlla le posizioni adiacenti alla traccia
-        for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
-            adjacent_pos = (x + dx, y + dy)
-            if self.model.is_shelf_position(adjacent_pos):
-                return adjacent_pos
-        return None
 
     def on_arrival(self):
         """Chiamata quando il muletto raggiunge la destinazione"""

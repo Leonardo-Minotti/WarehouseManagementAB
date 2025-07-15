@@ -25,6 +25,7 @@ def get_neighbors(model, pos: Tuple[int, int]) -> List[Tuple[int, int]]:
 
 
 def find_path(model, start: Tuple[int, int], goal: Tuple[int, int]) -> Optional[List[Tuple[int, int]]]:
+
     """Algoritmo A* per trovare il percorso più breve"""
     if start == goal:
         return [start]

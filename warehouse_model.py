@@ -167,7 +167,7 @@ class WarehouseModel(Model):
         start_y = 4
 
         # Corridoio orizzontale principale
-        corridor_y = (start_y + block_size + spacing / 2) - 1
+        corridor_y = (start_y + block_size + spacing / 2)
         for x in range(1, self.width - 1):
             self.tracks.add((x, int(corridor_y)))
 
