@@ -60,6 +60,8 @@ class UnloadingForkLift(ForkLift):
 
     def look_for_dock_with_order(self):
         """Cerca il primo dock con un ordine da scaricare"""
+
+
         for dock in self.model.unloading_docks:
             print(f"[DEBUG] Ordine al dock {dock.pos}: {dock.current_order}")
             if dock.current_order is not None and not dock.is_being_served:
@@ -79,13 +81,17 @@ class UnloadingForkLift(ForkLift):
                         self.state = "GOING_TO_DOCK"
                         print(f"[DEBUG] Andando verso il dock in {dock.pos}")
                     break
+            else:
+                stanby_pos = (28,28)
+                self.set_target(stanby_pos)
+                self.move_along_path()
+
 
     def move_along_path(self):
         """Muoviti lungo il percorso calcolato"""
         if not self.current_path or len(self.current_path) <= 1:
             self.on_arrival()
             return
-
 
         # Prendi il prossimo passo nel percorso
         next_pos = self.current_path[1]
@@ -127,7 +133,6 @@ class UnloadingForkLift(ForkLift):
             # Ordine completato
             print(f"[INFO] Ordine completato al dock {self.current_dock.pos}")
             self.current_dock.current_order = None
-            self.current_dock.is_being_served = False
             self.state = "IDLE"
             return
 
@@ -138,23 +143,24 @@ class UnloadingForkLift(ForkLift):
 
         # Decrementa di 1 la quantità per quel colore
         ordine.set_capacita_per_colore(colore_scelto, quantita_corrente - 1)
-
         print(f"[LOADING] Caricato 1 unità di {colore_scelto.value.upper()} dal dock {self.current_dock.pos}")
-        print(f"[LOADING] Capacità rimanente per {colore_scelto.value.upper()}: {quantita_corrente - 1}")
-        print(f"[LOADING] Capacità totale rimanente: {ordine.get_capacita_totale()}")
         empty_rack_pos = self.find_empty_rack(colore)
+
 
         self.set_target(empty_rack_pos)
         # Passa alla fase successiva
+        self.current_dock.is_being_served = False
+        if ordine.get_capacita_totale() == 0:
+            self.current_dock.complete_order()
         self.state = "GOING_TO_RACK"
 
     def find_empty_rack(self, color: str):
         """Trova un rack con spazio disponibile per il colore dato, partendo da quello più a destra"""
-        # Ordina gli shelves per coordinata x decrescente (più a destra prima)
+        # Ordina gli scaffali per coordinata x decrescente (da destra a sinistra)
+        sorted_shelves = sorted(self.model.shelves.items(), key=lambda item: item[0][0], reverse=True)
 
-        for (x, y), rack in self.model.shelves.items():
-            rack_color = rack.get_colore()  # supponiamo restituisca stringa o lista di stringhe
-            # Se è una singola stringa
+        for (x, y), rack in sorted_shelves:
+            rack_color = rack.get_colore()  # supponiamo restituisca una stringa
             if rack_color == color and rack.get_occupazione_corrente() < 15:
                 return (x, y + 1)
         return None
@@ -171,28 +177,15 @@ class UnloadingForkLift(ForkLift):
             # Aggiungi gli items al rack
             rack.aggiungi_items(1)
 
-            self.carried_items -= 1
-            print(f"LoadingForkLift: Scaricati items nel rack {rack_pos}")
-
-                    # Se ha finito di scaricare, torna IDLE
-            if self.carried_items == 0:
-                self.state = "IDLE"
-                self.target_rack = None
-                self.current_dock = None
-                print("LoadingForkLift: Lavoro completato, torno IDLE")
-
-            else:
-                print("LoadingForkLift: Errore nello scarico nel rack")
-                self.state = "IDLE"
-                self.carried_items = 0
-
+            self.carried_items = 0
+            self.target_rack = None
+            self.current_dock = None
+            self.state = "IDLE"
 
 
 
 class LoadingForkLift(ForkLift):
     #DAFARE
-
-
 
     def find_empty_rack(self, color):
         """Trova un rack con spazio disponibile"""
@@ -202,8 +195,6 @@ class LoadingForkLift(ForkLift):
                 if closest_track:
                     return closest_track
         return None
-
-
 
     def on_arrival(self):
         """Chiamata quando il muletto raggiunge la destinazione"""

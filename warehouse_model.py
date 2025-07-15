@@ -281,13 +281,10 @@ class WarehouseModel(Model):
 
     def _create_layout(self, num_unloading, num_loading, num_unloading_forkLift, num_loading_forkLift):
         # Posizionamento muletti nelle zone di scarico
-        center_y = self.grid.height // 2
-        start_y = center_y - num_unloading // 2
         for i in range(num_unloading_forkLift):
-            y = start_y + i
-            if 0 <= y < self.grid.height:
                 unloading_forklift = UnloadingForkLift(self)
-                self.grid.place_agent(unloading_forklift, (self.grid.width - 2, y))
+                standby_pos = (28,28)
+                self.grid.place_agent(unloading_forklift, standby_pos)
 
         # Posizionamento muletti nelle zone di carico
         for x in range(num_loading_forkLift):

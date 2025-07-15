@@ -96,17 +96,7 @@ class Order:
         self._capacita_totale += differenza
 
     def set_capacita_totale(self, nuova_capacita_totale: int):
-        """
-        Imposta una nuova capacità totale e ridistribuisce casualmente tra i colori
-
-        Args:
-            nuova_capacita_totale (int): La nuova capacità totale
-        """
-        if nuova_capacita_totale <= 0:
-            raise ValueError("La capacità totale deve essere maggiore di 0")
-
         self._capacita_totale = nuova_capacita_totale
-        self._capacita_per_colore = self._dividi_capacita_casualmente()
 
     # Print method
     def print_order(self):

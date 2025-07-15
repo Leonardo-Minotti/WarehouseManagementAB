@@ -42,6 +42,7 @@ def forkLiftportrayal(agent):
         portrayal["color"] = "tab:blue"
         portrayal["marker"] = "s"
         portrayal["zorder"] = 2
+
     return portrayal
 
 
