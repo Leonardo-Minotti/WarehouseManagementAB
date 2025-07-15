@@ -102,11 +102,10 @@ class Order:
         Args:
             nuova_capacita_totale (int): La nuova capacità totale
         """
-        if nuova_capacita_totale <= 0:
+        if nuova_capacita_totale < 0:
             raise ValueError("La capacità totale deve essere maggiore di 0")
 
         self._capacita_totale = nuova_capacita_totale
-        self._capacita_per_colore = self._dividi_capacita_casualmente()
 
     # Print method
     def print_order(self):
