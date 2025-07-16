@@ -79,6 +79,11 @@ class UnloadingForkLift(ForkLift):
                         self.state = "GOING_TO_DOCK"
                         print(f"[DEBUG] Andando verso il dock in {dock.pos}")
                     break
+            else:
+                stanby_pos = (28,28)
+                self.set_target(stanby_pos)
+                self.move_along_path()
+
 
     def move_along_path(self):
         """Muoviti lungo il percorso calcolato"""
@@ -147,15 +152,17 @@ class UnloadingForkLift(ForkLift):
         self.set_target(empty_rack_pos)
         # Passa alla fase successiva
         self.current_dock.is_being_served = False
+        if ordine.get_capacita_totale() == 0:
+            self.current_dock.complete_order()
         self.state = "GOING_TO_RACK"
 
     def find_empty_rack(self, color: str):
         """Trova un rack con spazio disponibile per il colore dato, partendo da quello più a destra"""
-        # Ordina gli shelves per coordinata x decrescente (più a destra prima)
+        # Ordina gli scaffali per coordinata x decrescente (da destra a sinistra)
+        sorted_shelves = sorted(self.model.shelves.items(), key=lambda item: item[0][0], reverse=True)
 
-        for (x, y), rack in self.model.shelves.items():
-            rack_color = rack.get_colore()  # supponiamo restituisca stringa o lista di stringhe
-            # Se è una singola stringa
+        for (x, y), rack in sorted_shelves:
+            rack_color = rack.get_colore()  # supponiamo restituisca una stringa
             if rack_color == color and rack.get_occupazione_corrente() < 15:
                 return (x, y + 1)
         return None
@@ -172,20 +179,11 @@ class UnloadingForkLift(ForkLift):
             # Aggiungi gli items al rack
             rack.aggiungi_items(1)
 
-            self.carried_items -= 1
-            print(f"UnLoadingForkLift: Scaricati items nel rack {rack_pos}")
+            self.carried_items = 0
+            self.target_rack = None
+            self.current_dock = None
+            self.state = "IDLE"
 
-                    # Se ha finito di scaricare, torna IDLE
-            if self.carried_items == 0:
-                self.state = "IDLE"
-                self.target_rack = None
-                self.current_dock = None
-                print("UnLoadingForkLift: Lavoro completato, torno IDLE")
-
-            else:
-                print("UnLoadingForkLift: Errore nello scarico nel rack")
-                self.state = "IDLE"
-                self.carried_items = 0
 
 
 class LoadingForkLift(ForkLift):
