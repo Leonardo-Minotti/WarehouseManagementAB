@@ -185,15 +185,15 @@ class UnloadingForkLift(ForkLift):
             self.state = "IDLE"
 
 
-
 class LoadingForkLift(ForkLift):
     def __init__(self, model, free=True):
         super().__init__(model, free)
-        self.state = "IDLE"  # Stati: IDLE, GOING_TO_RACK, LOADING, GOING_TO_DOCK, UNLOADING
+        self.state = "IDLE"  # Stati: IDLE, GOING_TO_RACK, LOADING, GOING_TO_DOCK, UNLOADING, GOING_TO_STANDBY
         self.carried_items = 0
         self.current_dock = None
         self.target_rack = None
         self.current_color = None  # Colore dell'item trasportato
+        self.standby_position = (14, 1)
 
     def step(self):
         if self.state == "IDLE":
@@ -211,46 +211,86 @@ class LoadingForkLift(ForkLift):
         elif self.state == "UNLOADING":
             self.unload_items_to_dock()
 
+        elif self.state == "GOING_TO_STANDBY":
+            self.move_along_path()
+
     def look_for_dock_with_order(self):
         """Cerca il primo dock con un ordine da caricare"""
+        has_work = False
+
         for dock in self.model.loading_docks:
             print(f"[DEBUG] Ordine al dock {dock.pos}: {dock.current_order}")
             print(f"[DEBUG] Divisione temp al dock {dock.pos}: {dock.divisione_temp}")
+
+            # Verifica che ci sia sia un ordine che una divisione_temp
             if dock.current_order is not None and dock.divisione_temp is not None:
-                # Cerca un rack con items per l'ordine usando divisione_temp
-                ordine_temp = dock.divisione_temp
+                # Controlla se l'ordine è realmente completato guardando ENTRAMBI
+                ordine_completato = dock.current_order.get_capacita_totale() == 0
+                divisione_temp_completata = dock.divisione_temp.get_capacita_totale() == 0
 
-                # Trova un colore disponibile nell'ordine temporaneo
-                colori_richiesti = [colore for colore, qty in ordine_temp.get_tutte_capacita().items() if qty > 0]
+                # Se l'ordine è completato ma la divisione_temp no, sincronizza
+                if ordine_completato and not divisione_temp_completata:
+                    print(f"[SYNC] Ordine completato ma divisione_temp non sincronizzata, pulizia...")
+                    dock.current_order = None
+                    dock.divisione_temp = None
+                    dock.is_being_served = False
+                    dock.free = True
+                    continue
 
-                if colori_richiesti:
-                    # Scegli un colore casuale tra quelli richiesti
-                    colore_scelto = choice(colori_richiesti)
-                    rack_pos = self.find_rack_with_items(colore_scelto.value)
+                # Se l'ordine non è completato ma la divisione_temp sì, ripristina la divisione_temp
+                if not ordine_completato and divisione_temp_completata:
+                    print(f"[SYNC] Divisione_temp vuota ma ordine non completato, ripristino...")
+                    # Ripristina la divisione_temp con i valori dell'ordine originale
+                    for colore, qty in dock.current_order.get_tutte_capacita().items():
+                        dock.divisione_temp.set_capacita_per_colore(colore, qty)
+                    print(
+                        f"[SYNC] Divisione_temp ripristinata con capacità totale: {dock.divisione_temp.get_capacita_totale()}")
 
-                    if rack_pos:
-                        self.current_dock = dock
-                        dock.is_being_served = True
-                        self.current_color = colore_scelto
+                # Procedi solo se entrambi hanno ancora items
+                if not ordine_completato and not divisione_temp_completata:
+                    # Cerca un rack con items per l'ordine usando divisione_temp
+                    ordine_temp = dock.divisione_temp
 
-                        # Decrementa dalla divisione_temp per prenotare l'item
-                        quantita_corrente = ordine_temp.get_capacita_per_colore(colore_scelto)
-                        ordine_temp.set_capacita_per_colore(colore_scelto, quantita_corrente - 1)
+                    # Trova un colore disponibile nell'ordine temporaneo
+                    colori_richiesti = [colore for colore, qty in ordine_temp.get_tutte_capacita().items() if qty > 0]
 
-                        print(f"[RESERVATION] Prenotato 1 unità di {colore_scelto.value.upper()} da divisione_temp")
-                        print(
-                            f"[RESERVATION] Rimangono {quantita_corrente - 1} unità di {colore_scelto.value.upper()} in divisione_temp")
+                    if colori_richiesti:
+                        # Scegli un colore casuale tra quelli richiesti
+                        colore_scelto = choice(colori_richiesti)
+                        rack_pos = self.find_rack_with_items(colore_scelto.value)
 
-                        if self.pos == rack_pos:
-                            # Già davanti al rack → passa direttamente a LOADING
-                            self.state = "LOADING"
-                            print(f"[DEBUG] Muletto già davanti al rack {rack_pos}, passo direttamente a LOADING")
-                        else:
-                            # Muoviti verso il rack
-                            self.set_target(rack_pos)
-                            self.state = "GOING_TO_RACK"
-                            print(f"[DEBUG] Andando verso il rack in {rack_pos} per colore {colore_scelto.value}")
-                        break
+                        if rack_pos:
+                            has_work = True
+                            self.current_dock = dock
+                            dock.is_being_served = True
+                            self.current_color = colore_scelto
+
+                            # Decrementa dalla divisione_temp per prenotare l'item
+                            quantita_corrente = ordine_temp.get_capacita_per_colore(colore_scelto)
+                            ordine_temp.set_capacita_per_colore(colore_scelto, quantita_corrente - 1)
+
+                            print(f"[RESERVATION] Prenotato 1 unità di {colore_scelto.value.upper()} da divisione_temp")
+                            print(
+                                f"[RESERVATION] Rimangono {quantita_corrente - 1} unità di {colore_scelto.value.upper()} in divisione_temp")
+
+                            if self.pos == rack_pos:
+                                # Già davanti al rack → passa direttamente a LOADING
+                                self.state = "LOADING"
+                                print(f"[DEBUG] Muletto già davanti al rack {rack_pos}, passo direttamente a LOADING")
+                            else:
+                                # Muoviti verso il rack
+                                self.set_target(rack_pos)
+                                self.state = "GOING_TO_RACK"
+                                print(f"[DEBUG] Andando verso il rack in {rack_pos} per colore {colore_scelto.value}")
+                            break
+
+        # Se non c'è lavoro da fare, vai al punto standby
+        if not has_work:
+            if self.pos != self.standby_position:
+                self.set_target(self.standby_position)
+                self.state = "GOING_TO_STANDBY"
+                print(f"[DEBUG] Nessun lavoro disponibile, andando al punto standby {self.standby_position}")
+            # Se è già al punto standby, rimane IDLE senza muoversi
 
     def move_along_path(self):
         """Muoviti lungo il percorso calcolato"""
@@ -272,10 +312,15 @@ class LoadingForkLift(ForkLift):
     def on_arrival(self):
         """Chiamata quando il muletto raggiunge la destinazione"""
         self.current_path = []
+        self.target_position = None
+
         if self.state == "GOING_TO_RACK":
             self.state = "LOADING"
         elif self.state == "GOING_TO_DOCK":
             self.state = "UNLOADING"
+        elif self.state == "GOING_TO_STANDBY":
+            self.state = "IDLE"
+            print(f"[DEBUG] Raggiunto punto standby, torno IDLE")
 
     def load_items_from_rack(self):
         """Carica un solo elemento dal rack"""
@@ -299,20 +344,30 @@ class LoadingForkLift(ForkLift):
                         self.state = "GOING_TO_DOCK"
                     else:
                         print("[ERROR] Impossibile trovare traccia per il dock")
-                        self.state = "IDLE"
-                        self.reset_state()
+                        self._restore_item_and_go_standby()
                 else:
                     print("[ERROR] Impossibile rimuovere item dal rack")
-                    self.state = "IDLE"
-                    self.reset_state()
+                    self._restore_item_and_go_standby()
             else:
                 print(f"[ERROR] Rack non ha items del colore richiesto: {self.current_color.value}")
-                self.state = "IDLE"
-                self.reset_state()
+                self._restore_item_and_go_standby()
         else:
             print(f"[ERROR] Nessun rack trovato in posizione {rack_pos}")
-            self.state = "IDLE"
-            self.reset_state()
+            self._restore_item_and_go_standby()
+
+    def _restore_item_and_go_standby(self):
+        """Metodo helper per ripristinare l'item e andare al punto standby"""
+        # Riaggiunge l'item alla divisione_temp
+        if self.current_dock and self.current_dock.divisione_temp and self.current_color:
+            ordine_temp = self.current_dock.divisione_temp
+            quantita_corrente = ordine_temp.get_capacita_per_colore(self.current_color)
+            ordine_temp.set_capacita_per_colore(self.current_color, quantita_corrente + 1)
+            print(f"[RESTORE] Riaggiunto 1 unità di {self.current_color.value.upper()} alla divisione_temp")
+
+        # Reset dello stato e vai al punto standby
+        self.reset_state()
+        self.set_target(self.standby_position)
+        self.state = "GOING_TO_STANDBY"
 
     def unload_items_to_dock(self):
         """Scarica l'item al dock"""
@@ -326,24 +381,27 @@ class LoadingForkLift(ForkLift):
             self.carried_items = 0
             print(
                 f"[UNLOADING] Scaricato 1 unità di {self.current_color.value.upper()} al dock {self.current_dock.pos}")
-            print(f"[UNLOADING] Capacità rimanente per {self.current_color.value.upper()}: {quantita_corrente - 1}")
+            print(f"[UNLOADING] Capacità rimanente per {self.current_color.value.upper()}: {quantita_corrente}")
             print(f"[UNLOADING] Capacità totale rimanente: {ordine.get_capacita_totale()}")
 
-            # Controlla se l'ordine è completato
+            # Controlla se l'ordine è completato usando SOLO l'ordine originale
             if ordine.get_capacita_totale() == 0:
                 print(f"[INFO] Ordine completato al dock {self.current_dock.pos}")
                 self.current_dock.current_order = None
+                self.current_dock.divisione_temp = None
                 self.current_dock.is_being_served = False
                 self.current_dock.free = True
                 self.reset_state()
+                self.state = "IDLE"
             else:
                 # Continua con l'ordine - cerca il prossimo item
                 self.current_dock.is_being_served = False
                 self.reset_state()
-
+                self.state = "IDLE"
         else:
             print("[ERROR] Nessun item da scaricare o dock non valido")
             self.reset_state()
+            self.state = "IDLE"
 
     def find_closest_track_to_dock(self, dock_pos):
         """Trova la traccia più vicina a un dock"""
@@ -365,11 +423,11 @@ class LoadingForkLift(ForkLift):
 
     def reset_state(self):
         """Resetta lo stato del muletto"""
-        self.state = "IDLE"
         self.target_rack = None
         self.current_dock = None
         self.current_color = None
         self.target_position = None
         self.current_path = []
-        print("LoadingForkLift: Stato resettato, torno IDLE")
+        print("LoadingForkLift: Stato resettato")
+
 

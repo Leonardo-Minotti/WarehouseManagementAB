@@ -283,13 +283,14 @@ class WarehouseModel(Model):
         # Posizionamento muletti nelle zone di scarico
         for i in range(num_unloading_forkLift):
                 unloading_forklift = UnloadingForkLift(self)
-                standby_pos = (28,28)
-                self.grid.place_agent(unloading_forklift, standby_pos)
+                standby_pos_unloading = (28,28)
+                self.grid.place_agent(unloading_forklift, standby_pos_unloading)
 
         # Posizionamento muletti nelle zone di carico
         for x in range(num_loading_forkLift):
             loading_forklift = LoadingForkLift(self)
-            self.grid.place_agent(loading_forklift, (x + 1, 1))
+            standby_pos_loading = (14, 1)
+            self.grid.place_agent(loading_forklift, standby_pos_loading)
 
         # Posizionamento dock scarico
         center_y = self.grid.height // 2
