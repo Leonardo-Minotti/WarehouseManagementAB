@@ -27,13 +27,23 @@ def forkLiftportrayal(agent):
     }
 
     if isinstance(agent, UnloadingForkLift):
-        portrayal["color"] = "tab:red"
-        portrayal["marker"] = "o"
-        portrayal["zorder"] = 3
+        if not agent.free:
+            portrayal["color"] = "tab:red"
+            portrayal["marker"] = "^"
+            portrayal["zorder"] = 3
+        else:
+            portrayal["color"] = "tab:red"
+            portrayal["marker"] = "o"
+            portrayal["zorder"] = 3
     elif isinstance(agent, LoadingForkLift):
-        portrayal["color"] = "tab:orange"
-        portrayal["marker"] = "o"
-        portrayal["zorder"] = 3
+        if not agent.free:
+            portrayal["color"] = "tab:orange"
+            portrayal["marker"] = "^"
+            portrayal["zorder"] = 3
+        else:
+            portrayal["color"] = "tab:orange"
+            portrayal["marker"] = "o"
+            portrayal["zorder"] = 3
     elif isinstance(agent, UnloadingDock):
         portrayal["color"] = "tab:green"
         portrayal["marker"] = "s"

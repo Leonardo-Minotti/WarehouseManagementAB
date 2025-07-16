@@ -58,6 +58,7 @@ class UnloadingForkLift(ForkLift):
             self.unload_items_to_rack()
 
 
+
     def look_for_dock_with_order(self):
         """Cerca il primo dock con un ordine da scaricare"""
         for dock in self.model.unloading_docks:
@@ -152,6 +153,7 @@ class UnloadingForkLift(ForkLift):
         self.set_target(empty_rack_pos)
         # Passa alla fase successiva
         self.current_dock.is_being_served = False
+        self.free = False
         if ordine.get_capacita_totale() == 0:
             self.current_dock.complete_order()
         self.state = "GOING_TO_RACK"
@@ -182,6 +184,7 @@ class UnloadingForkLift(ForkLift):
             self.carried_items = 0
             self.target_rack = None
             self.current_dock = None
+            self.free = True
             self.state = "IDLE"
 
 
@@ -238,8 +241,7 @@ class LoadingForkLift(ForkLift):
                         ordine_temp.set_capacita_per_colore(colore_scelto, quantita_corrente - 1)
 
                         print(f"[RESERVATION] Prenotato 1 unità di {colore_scelto.value.upper()} da divisione_temp")
-                        print(
-                            f"[RESERVATION] Rimangono {quantita_corrente - 1} unità di {colore_scelto.value.upper()} in divisione_temp")
+                        print(f"[RESERVATION] Rimangono {quantita_corrente - 1} unità di {colore_scelto.value.upper()} in divisione_temp")
 
                         if self.pos == rack_pos:
                             # Già davanti al rack → passa direttamente a LOADING
@@ -257,7 +259,6 @@ class LoadingForkLift(ForkLift):
         if not self.current_path or len(self.current_path) <= 1:
             self.on_arrival()
             return
-
         # Prendi il prossimo passo nel percorso
         next_pos = self.current_path[1]
 
@@ -280,6 +281,7 @@ class LoadingForkLift(ForkLift):
     def load_items_from_rack(self):
         """Carica un solo elemento dal rack"""
         # Trova il rack in posizione adiacente
+        self.free = False
         rack_pos = (self.pos[0], self.pos[1] - 1)
 
         if rack_pos in self.model.shelves:
@@ -328,7 +330,7 @@ class LoadingForkLift(ForkLift):
                 f"[UNLOADING] Scaricato 1 unità di {self.current_color.value.upper()} al dock {self.current_dock.pos}")
             print(f"[UNLOADING] Capacità rimanente per {self.current_color.value.upper()}: {quantita_corrente - 1}")
             print(f"[UNLOADING] Capacità totale rimanente: {ordine.get_capacita_totale()}")
-
+            self.free = True
             # Controlla se l'ordine è completato
             if ordine.get_capacita_totale() == 0:
                 print(f"[INFO] Ordine completato al dock {self.current_dock.pos}")
