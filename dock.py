@@ -16,7 +16,6 @@ class Dock(FixedAgent):
         super().__init__(model)
         self.free = free
         self.current_order = None
-        self.is_being_served = False
 
 
 class UnloadingDock(Dock):
@@ -29,7 +28,6 @@ class UnloadingDock(Dock):
         super().__init__(model)
         self.free = free
         self.current_order = None  # Aggiungo l'attributo per l'ordine corrente
-        self.is_being_served = False  # Aggiunta per tracciare se un muletto sta servendo questo dock
         self.divisione_temp = None
     def receive_order(self, order):
         if self.free:
@@ -37,10 +35,7 @@ class UnloadingDock(Dock):
             self.divisione_temp = Order(order.get_capacita_totale())
             for colore, qty in order.get_tutte_capacita().items():
                 self.divisione_temp.set_capacita_per_colore(colore, qty)
-
-
             self.free = False
-            self.is_being_served = False  # Aggiunta per tracciare se un muletto sta servendo questo dock
             return True
         else:
             return False
@@ -49,7 +44,6 @@ class UnloadingDock(Dock):
         completed_order = self.current_order
         self.current_order = None
         self.free = True
-        self.is_being_served = False  # Aggiunta per tracciare se un muletto sta servendo questo dock
         return completed_order
 
 
@@ -63,7 +57,6 @@ class LoadingDock(Dock):
         super().__init__(model)
         self.free = free
         self.current_order = None  # Aggiungo l'attributo per l'ordine corrente
-        self.is_being_served = False  # Aggiunta per tracciare se un muletto sta servendo questo dock
         self.divisione_temp = None
 
     def receive_order(self, order):
@@ -75,7 +68,6 @@ class LoadingDock(Dock):
             for colore, qty in order.get_tutte_capacita().items():
                 self.divisione_temp.set_capacita_per_colore(colore, qty)
 
-            self.is_being_served = False  # Reset quando riceve un nuovo ordine
             self.free = False
             return True
         else:
@@ -84,9 +76,5 @@ class LoadingDock(Dock):
     def complete_order(self):
         completed_order = self.current_order
         self.current_order = None
-        print(f"LoadingDock in {self.pos}: Ordine completato")
-
-        self.is_being_served = False
-
         self.free = True
         return completed_order
