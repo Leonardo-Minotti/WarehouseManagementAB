@@ -403,6 +403,8 @@ class WarehouseModel(Model):
         self.agents_by_type[UnloadingForkLift].shuffle_do("step")
         self.agents_by_type[LoadingForkLift].shuffle_do("step")
 
+
+
     def get_warehouse_stats(self):
         """Ritorna statistiche del magazzino"""
         total_racks = len(self.shelves)

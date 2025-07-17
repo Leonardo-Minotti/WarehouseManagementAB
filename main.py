@@ -14,6 +14,8 @@ from mesa.visualization import (
     make_space_component,
 )
 
+# Importa le nuove classi
+
 # Variabile globale per accedere al modello
 current_model = None
 
@@ -157,19 +159,6 @@ def warehouse_status_component(model):
         content.append(f"**Prossimo ordine scarico tra:** {next_unloading_order} step")
 
     return solara.Markdown("\n".join(content))
-
-
-model_params = {
-    "width": 30,
-    "height": 30,
-    "num_unloading": Slider("Number of unloading docks", 1, 1, 5),
-    "num_loading": Slider("Number of loading docks", 1, 1, 5),
-    "dock_capacity": Slider("Maxinum dock capacity", 1, 5, 10),
-    "order_time": Slider("Time order", 1, 10, 20),
-    "num_unloading_forkLift": Slider("Number of unloading forkLifts", 1, 1, 10),
-    "num_loading_forkLift": Slider("Number of loading forkLifts", 1, 1, 10),
-    "initial_warehouse_filling": Slider("initial warehouse filling percentage", 1, 1, 100)
-}
 
 
 def post_process_space(ax):
@@ -355,7 +344,6 @@ def post_process_space(ax):
         ax.plot([start_x - 2, model_to_use.width - 2], [corridor_y3, corridor_y3],
                 color=track_color, linewidth=1, alpha=track_alpha, zorder=0.5)
 
-
     # Corridoio verticale centrale (tra i blocchi sinistri e destri)
     corridor_x = (start_x + block_size + spacing / 2) - 0.5
     ax.plot([corridor_x, corridor_x], [start_y - 3, model_to_use.height - 2],
@@ -371,8 +359,7 @@ def post_process_space(ax):
     ax.plot([corridor_x, corridor_x], [start_y - 3, model_to_use.height - 2],
             color=track_color, linewidth=track_width, alpha=track_alpha, zorder=0.5)
 
-    #FINE DISCEGNO TRACCE
-
+    # FINE DISCEGNO TRACCE
 
     # === AGGIUNGI QUESTA SEZIONE PER I BORDI DELLE CELLE ===
     # Disegna i bordi di tutte le celle della griglia
@@ -396,7 +383,7 @@ def post_process_space(ax):
     start_x = 3
     start_y = 4
 
-    #TODO : FINE GRIGLIA DA ELIMINARE
+    # TODO : FINE GRIGLIA DA ELIMINARE
 
 
 def custom_space_component(model):
@@ -413,13 +400,43 @@ def custom_space_component(model):
     )(model)
 
 
+# Funzione per creare componente grafici che accede al data collector
+def charts_component(model):
+    """Componente che mostra i grafici analytics"""
+    if hasattr(model, 'data_collector'):
+        return create_charts_component(model.data_collector)()
+    else:
+        return solara.Markdown("**⚠️ Data collector non disponibile**")
+
+
+model_params = {
+    "width": 30,
+    "height": 30,
+    "num_unloading": Slider("Number of unloading docks", 1, 1, 5),
+    "num_loading": Slider("Number of loading docks", 1, 1, 5),
+    "dock_capacity": Slider("Maxinum dock capacity", 1, 5, 10),
+    "order_time": Slider("Time order", 1, 10, 20),
+    "num_unloading_forkLift": Slider("Number of unloading forkLifts", 1, 1, 10),
+    "num_loading_forkLift": Slider("Number of loading forkLifts", 1, 1, 10),
+    "initial_warehouse_filling": Slider("initial warehouse filling percentage", 1, 1, 100)
+}
+
+# Creazione del simulatore e del modello
 simulator = ABMSimulator()
 model = WarehouseModel(simulator=simulator)
+
+
 current_model = model  # Inizializza la variabile globale
 
+# Modifica la creazione della pagina per includere i grafici
 page = SolaraViz(
     model,
-    components=[custom_space_component, warehouse_status_component, CommandConsole],
+    components=[
+        custom_space_component,
+        warehouse_status_component,
+        charts_component,  # Aggiungi il componente grafici
+        CommandConsole
+    ],
     model_params=model_params,
     name="Warehouse",
     simulator=simulator,

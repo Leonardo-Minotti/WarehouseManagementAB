@@ -63,12 +63,12 @@ class UnloadingForkLift(ForkLift):
         """Cerca il primo dock con un ordine da scaricare"""
         for dock in self.model.unloading_docks:
             print(f"[DEBUG] Ordine al dock {dock.pos}: {dock.current_order}")
-            if dock.current_order is not None and not dock.is_being_served:
+            if dock.current_order is not None:# and not dock.is_being_served:
                 dock_track = self.find_closest_track_to_dock(dock.pos)
 
                 if dock_track:
                     self.current_dock = dock
-                    dock.is_being_served = True
+                    #dock.is_being_served = True
 
                     if self.pos == dock_track:
                         # Già davanti al dock → passa direttamente a LOADING
