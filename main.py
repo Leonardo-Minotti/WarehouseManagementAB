@@ -1,6 +1,8 @@
 import solara
-from matplotlib import patches
+from matplotlib import patches, pyplot as plt
 from mesa.visualization import SolaraViz, make_plot_component
+import numpy as np
+import pandas as pd
 
 from dock import Dock, UnloadingDock, LoadingDock
 from forkLift import ForkLift, UnloadingForkLift, LoadingForkLift
@@ -400,7 +402,79 @@ def custom_space_component(model):
     )(model)
 
 
+def create_warehouse_plots(model):
+    """Crea grafici per visualizzare i dati della simulazione"""
 
+    if not model.data_collector['step']:
+        return None
+
+    # Crea una figura con subplots
+    fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+    fig.suptitle('Analisi Prestazioni Warehouse', fontsize=16, fontweight='bold')
+
+    steps = model.data_collector['step']
+
+    # Grafico 1: Occupazione Magazzino
+    ax1 = axes[0, 0]
+    ax1.plot(steps, model.data_collector['occupazione_totale'],
+             color='blue', linewidth=2, label='Occupazione Totale')
+    ax1.set_title('Occupazione Magazzino nel Tempo')
+    ax1.set_xlabel('Step')
+    ax1.set_ylabel('Occupazione (%)')
+    ax1.grid(True, alpha=0.3)
+    ax1.legend()
+
+    # Grafico 2: Ordini Processati
+    ax2 = axes[0, 1]
+    ax2.plot(steps, model.data_collector['ordini_carico_processati'],
+             color='green', linewidth=2, label='Ordini Carico')
+    ax2.plot(steps, model.data_collector['ordini_scarico_processati'],
+             color='red', linewidth=2, label='Ordini Scarico')
+    ax2.set_title('Ordini Processati')
+    ax2.set_xlabel('Step')
+    ax2.set_ylabel('Numero Ordini')
+    ax2.grid(True, alpha=0.3)
+    ax2.legend()
+
+    # Grafico 3: Efficienza Dock
+    ax3 = axes[1, 0]
+    dock_carico_occupati = [len(model.loading_docks) - liberi
+                            for liberi in model.data_collector['dock_carico_liberi']]
+    dock_scarico_occupati = [len(model.unloading_docks) - liberi
+                             for liberi in model.data_collector['dock_scarico_liberi']]
+
+    ax3.plot(steps, dock_carico_occupati, color='orange', linewidth=2, label='Dock Carico Occupati')
+    ax3.plot(steps, dock_scarico_occupati, color='purple', linewidth=2, label='Dock Scarico Occupati')
+    ax3.set_title('Utilizzo Dock')
+    ax3.set_xlabel('Step')
+    ax3.set_ylabel('Numero Dock Occupati')
+    ax3.grid(True, alpha=0.3)
+    ax3.legend()
+
+    # Grafico 4: Code di Attesa
+    ax4 = axes[1, 1]
+    ax4.plot(steps, model.data_collector['ordini_carico_in_coda'],
+             color='brown', linewidth=2, label='Coda Carico')
+    ax4.plot(steps, model.data_collector['ordini_scarico_in_coda'],
+             color='pink', linewidth=2, label='Coda Scarico')
+    ax4.set_title('Ordini in Coda')
+    ax4.set_xlabel('Step')
+    ax4.set_ylabel('Numero Ordini in Coda')
+    ax4.grid(True, alpha=0.3)
+    ax4.legend()
+
+    plt.tight_layout()
+    return fig
+
+
+# Componente per mostrare i grafici nella visualizzazione Solara
+def warehouse_plots_component(model):
+    """Componente Solara per visualizzare i grafici"""
+    fig = create_warehouse_plots(model)
+    if fig:
+        return solara.FigureMatplotlib(fig)
+    else:
+        return solara.Markdown("**Nessun dato disponibile per i grafici**")
 
 
 model_params = {
@@ -415,6 +489,8 @@ model_params = {
     "initial_warehouse_filling": Slider("initial warehouse filling percentage", 1, 1, 100)
 }
 
+
+
 # Creazione del simulatore e del modello
 simulator = ABMSimulator()
 model = WarehouseModel(simulator=simulator)
@@ -428,7 +504,7 @@ page = SolaraViz(
     components=[
         custom_space_component,
         warehouse_status_component,
-        CommandConsole
+        warehouse_plots_component,
     ],
     model_params=model_params,
     name="Warehouse",
