@@ -400,13 +400,7 @@ def custom_space_component(model):
     )(model)
 
 
-# Funzione per creare componente grafici che accede al data collector
-def charts_component(model):
-    """Componente che mostra i grafici analytics"""
-    if hasattr(model, 'data_collector'):
-        return create_charts_component(model.data_collector)()
-    else:
-        return solara.Markdown("**⚠️ Data collector non disponibile**")
+
 
 
 model_params = {
@@ -434,7 +428,6 @@ page = SolaraViz(
     components=[
         custom_space_component,
         warehouse_status_component,
-        charts_component,  # Aggiungi il componente grafici
         CommandConsole
     ],
     model_params=model_params,

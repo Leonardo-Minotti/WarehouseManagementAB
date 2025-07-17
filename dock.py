@@ -2,6 +2,9 @@
 from mesa.agent import Agent
 from mesa.discrete_space import CellAgent, FixedAgent
 
+from order import Order
+
+
 class Dock(FixedAgent):
 
 
@@ -27,10 +30,15 @@ class UnloadingDock(Dock):
         self.free = free
         self.current_order = None  # Aggiungo l'attributo per l'ordine corrente
         self.is_being_served = False  # Aggiunta per tracciare se un muletto sta servendo questo dock
-
+        self.divisione_temp = None
     def receive_order(self, order):
         if self.free:
             self.current_order = order
+            self.divisione_temp = Order(order.get_capacita_totale())
+            for colore, qty in order.get_tutte_capacita().items():
+                self.divisione_temp.set_capacita_per_colore(colore, qty)
+
+
             self.free = False
             self.is_being_served = False  # Aggiunta per tracciare se un muletto sta servendo questo dock
             return True
@@ -62,7 +70,6 @@ class LoadingDock(Dock):
         if self.free:
             self.current_order = order
             # Crea una copia dell'ordine per le prenotazioni
-            from order import Order
             self.divisione_temp = Order(order.get_capacita_totale())
             # Copia le capacità per colore
             for colore, qty in order.get_tutte_capacita().items():
