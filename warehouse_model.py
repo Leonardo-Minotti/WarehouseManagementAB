@@ -234,6 +234,7 @@ class WarehouseModel(Model):
             pos = all_positions[i]
             rack = self.shelves[pos]
             rack.set_occupazione_corrente(15)
+            rack.set_occupazione_temp(15)
             items_placed += 15
 
         # FASE 3: Se ci sono items rimanenti, riempi parzialmente il prossimo rack
@@ -241,6 +242,7 @@ class WarehouseModel(Model):
             pos = all_positions[rack_completi]  # Il rack successivo a quelli completi
             rack = self.shelves[pos]
             rack.set_occupazione_corrente(items_rimanenti)
+            rack.set_occupazione_temp(items_rimanenti)
             items_placed += items_rimanenti
 
         print(f"Items piazzati: {items_placed}")
@@ -283,13 +285,14 @@ class WarehouseModel(Model):
         # Posizionamento muletti nelle zone di scarico
         for i in range(num_unloading_forkLift):
                 unloading_forklift = UnloadingForkLift(self)
-                standby_pos = (28,28)
-                self.grid.place_agent(unloading_forklift, standby_pos)
+                standby_pos_unloading = (28,28)
+                self.grid.place_agent(unloading_forklift, standby_pos_unloading)
 
         # Posizionamento muletti nelle zone di carico
         for x in range(num_loading_forkLift):
             loading_forklift = LoadingForkLift(self)
-            self.grid.place_agent(loading_forklift, (x + 1, 1))
+            standby_pos_loading = (14, 1)
+            self.grid.place_agent(loading_forklift, standby_pos_loading)
 
         # Posizionamento dock scarico
         center_y = self.grid.height // 2
