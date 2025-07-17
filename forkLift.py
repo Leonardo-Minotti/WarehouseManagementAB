@@ -99,7 +99,6 @@ class UnloadingForkLift(ForkLift):
                                 self.set_target(dock_track)
                                 self.state = "GOING_TO_DOCK"
                             break
-
         # Se non c'è lavoro da fare, vai al punto standby
         if not has_work:
             standby_pos = (28, 28)
@@ -114,14 +113,11 @@ class UnloadingForkLift(ForkLift):
             self.on_arrival()
             return
 
-
         # Prendi il prossimo passo nel percorso
         next_pos = self.current_path[1]
-
         # Muoviti semplicemente senza controlli di collisione
         self.model.grid.move_agent(self, next_pos)
         self.current_path.pop(0)
-
         # Se hai raggiunto la destinazione
         if self.pos == self.target_position:
             self.on_arrival()
@@ -149,15 +145,12 @@ class UnloadingForkLift(ForkLift):
     def load_items_from_dock(self):
         """Carica un solo elemento (di un colore casuale disponibile) dall'ordine del dock"""
         ordine = self.current_dock.current_order
-
-
         # Trova tutti i colori con almeno 1 unità disponibile
         colori_disponibili = [colore for colore, qty in ordine.get_tutte_capacita().items() if qty > 0]
 
         if not colori_disponibili:
             # Ordine completato
             self.current_dock.current_order = None
-
             self.state = "IDLE"
             return
 
@@ -170,13 +163,8 @@ class UnloadingForkLift(ForkLift):
             return
 
         quantita_corrente = ordine.get_capacita_per_colore(colore_scelto)
-
         # Decrementa di 1 la quantità per quel colore
         ordine.set_capacita_per_colore(colore_scelto, quantita_corrente - 1)
-
-
-
-
         self.set_target(empty_rack_pos)
         # Passa alla fase successiva
         self.free = False
@@ -193,7 +181,6 @@ class UnloadingForkLift(ForkLift):
             rack_color = rack.get_colore()  # supponiamo restituisca una stringa
             if rack_color == color and rack.get_occupazione_corrente() < 15:
                 return (x, y + 1)
-
         return None
 
     def unload_items_to_rack(self):
@@ -272,11 +259,9 @@ class LoadingForkLift(ForkLift):
                             has_work = True
                             self.current_dock = dock
                             self.current_color = colore_scelto
-
                             # Decrementa dalla divisione_temp per prenotare l'item
                             quantita_corrente = ordine_temp.get_capacita_per_colore(colore_scelto)
                             ordine_temp.set_capacita_per_colore(colore_scelto, quantita_corrente - 1)
-
                             print(f"[RESERVATION] Prenotato 1 unità di {colore_scelto.value.upper()} da divisione_temp")
 
                             if self.pos == rack_pos:
@@ -287,7 +272,6 @@ class LoadingForkLift(ForkLift):
                                 self.set_target(rack_pos)
                                 self.state = "GOING_TO_RACK"
                             break
-
         # Se non c'è lavoro da fare, vai al punto standby
         if not has_work:
             if self.pos != self.standby_position:
@@ -303,11 +287,9 @@ class LoadingForkLift(ForkLift):
 
         # Prendi il prossimo passo nel percorso
         next_pos = self.current_path[1]
-
         # Muoviti semplicemente senza controlli di collisione
         self.model.grid.move_agent(self, next_pos)
         self.current_path.pop(0)
-
         # Se hai raggiunto la destinazione
         if self.pos == self.target_position:
             self.on_arrival()
@@ -329,7 +311,6 @@ class LoadingForkLift(ForkLift):
 
         # Trova il rack in posizione adiacente
         rack_pos = (self.pos[0], self.pos[1] - 1)
-
         if rack_pos in self.model.shelves:
             rack = self.model.shelves[rack_pos]
 
