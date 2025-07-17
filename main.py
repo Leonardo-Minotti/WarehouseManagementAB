@@ -409,7 +409,7 @@ def create_warehouse_plots(model):
         return None
 
     # Crea una figura con subplots
-    fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+    fig, axes = plt.subplots(3, 2, figsize=(16, 16))
     fig.suptitle('Analisi Prestazioni Warehouse', fontsize=16, fontweight='bold')
 
     steps = model.data_collector['step']
@@ -463,9 +463,20 @@ def create_warehouse_plots(model):
     ax4.grid(True, alpha=0.3)
     ax4.legend()
 
+    # Grafico 5: Muletti liberi
+    ax5 = axes[2, 0]
+    ax5.plot(steps, model.data_collector['muletti_carico_liberi'],
+             color='cyan', linewidth=2, label='Muletti Carico Liberi')
+    ax5.plot(steps, model.data_collector['muletti_scarico_liberi'],
+             color='magenta', linewidth=2, label='Muletti Scarico Liberi')
+    ax5.set_title('Muletti Liberi nel Tempo')
+    ax5.set_xlabel('Step')
+    ax5.set_ylabel('Numero Muletti Liberi')
+    ax5.grid(True, alpha=0.3)
+    ax5.legend()
+
     plt.tight_layout()
     return fig
-
 
 # Componente per mostrare i grafici nella visualizzazione Solara
 def warehouse_plots_component(model):

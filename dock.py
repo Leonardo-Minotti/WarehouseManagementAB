@@ -70,6 +70,7 @@ class LoadingDock(Dock):
                 self.divisione_temp.set_capacita_per_colore(colore, qty)
 
             self.free = False
+
             return True
         else:
             return False

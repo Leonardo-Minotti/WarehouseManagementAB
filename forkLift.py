@@ -370,6 +370,7 @@ class LoadingForkLift(ForkLift):
             # Controlla se l'ordine è completato usando SOLO l'ordine originale
             if ordine.get_capacita_totale() == 0:
                 self.current_dock.current_order = None
+                self.current_dock.free = True
                 self.reset_state()
                 self.state = "IDLE"
             else:
