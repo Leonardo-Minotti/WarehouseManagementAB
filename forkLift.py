@@ -150,6 +150,7 @@ class UnloadingForkLift(ForkLift):
         """Carica un solo elemento (di un colore casuale disponibile) dall'ordine del dock"""
         ordine = self.current_dock.current_order
 
+
         # Trova tutti i colori con almeno 1 unità disponibile
         colori_disponibili = [colore for colore, qty in ordine.get_tutte_capacita().items() if qty > 0]
 
@@ -163,12 +164,17 @@ class UnloadingForkLift(ForkLift):
         # Scegli un colore casuale tra quelli disponibili
         colore_scelto = choice(colori_disponibili)
         colore = colore_scelto.value
+        empty_rack_pos = self.find_empty_rack(colore)
+        if empty_rack_pos is None:
+            self.STATE = "LOADING"
+            return
+
         quantita_corrente = ordine.get_capacita_per_colore(colore_scelto)
 
         # Decrementa di 1 la quantità per quel colore
         ordine.set_capacita_per_colore(colore_scelto, quantita_corrente - 1)
 
-        empty_rack_pos = self.find_empty_rack(colore)
+
 
 
         self.set_target(empty_rack_pos)
@@ -187,6 +193,7 @@ class UnloadingForkLift(ForkLift):
             rack_color = rack.get_colore()  # supponiamo restituisca una stringa
             if rack_color == color and rack.get_occupazione_corrente() < 15:
                 return (x, y + 1)
+
         return None
 
     def unload_items_to_rack(self):
