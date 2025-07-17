@@ -178,6 +178,7 @@ class UnloadingForkLift(ForkLift):
             print(f"RACKK {posizione}")
             # Aggiungi gli items al rack
             rack.aggiungi_items(1)
+            rack.set_occupazione_temp(rack.get_occupazione_temp() + 1)
 
             self.carried_items = 0
             self.target_rack = None
@@ -227,24 +228,6 @@ class LoadingForkLift(ForkLift):
                 # Controlla se l'ordine è realmente completato guardando ENTRAMBI
                 ordine_completato = dock.current_order.get_capacita_totale() == 0
                 divisione_temp_completata = dock.divisione_temp.get_capacita_totale() == 0
-
-                # Se l'ordine è completato ma la divisione_temp no, sincronizza
-                if ordine_completato and not divisione_temp_completata:
-                    print(f"[SYNC] Ordine completato ma divisione_temp non sincronizzata, pulizia...")
-                    dock.current_order = None
-                    dock.divisione_temp = None
-                    dock.is_being_served = False
-                    dock.free = True
-                    continue
-
-                # Se l'ordine non è completato ma la divisione_temp sì, ripristina la divisione_temp
-                if not ordine_completato and divisione_temp_completata:
-                    print(f"[SYNC] Divisione_temp vuota ma ordine non completato, ripristino...")
-                    # Ripristina la divisione_temp con i valori dell'ordine originale
-                    for colore, qty in dock.current_order.get_tutte_capacita().items():
-                        dock.divisione_temp.set_capacita_per_colore(colore, qty)
-                    print(
-                        f"[SYNC] Divisione_temp ripristinata con capacità totale: {dock.divisione_temp.get_capacita_totale()}")
 
                 # Procedi solo se entrambi hanno ancora items
                 if not ordine_completato and not divisione_temp_completata:
@@ -416,7 +399,9 @@ class LoadingForkLift(ForkLift):
     def find_rack_with_items(self, color: str):
         """Trova un rack con items del colore specificato"""
         for (x, y), rack in self.model.shelves.items():
-            if rack.get_colore() == color and rack.get_occupazione_corrente() > 0:
+            if rack.get_colore() == color and rack.get_occupazione_corrente() > 0 and rack.get_occupazione_temp() > 0:
+                # Decrementa l'occupazione_temp del rack
+                rack.set_occupazione_temp(rack.get_occupazione_temp() - 1)
                 # Restituisce la posizione della traccia adiacente al rack
                 return (x, y + 1)
         return None

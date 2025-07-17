@@ -234,6 +234,7 @@ class WarehouseModel(Model):
             pos = all_positions[i]
             rack = self.shelves[pos]
             rack.set_occupazione_corrente(15)
+            rack.set_occupazione_temp(15)
             items_placed += 15
 
         # FASE 3: Se ci sono items rimanenti, riempi parzialmente il prossimo rack
@@ -241,6 +242,7 @@ class WarehouseModel(Model):
             pos = all_positions[rack_completi]  # Il rack successivo a quelli completi
             rack = self.shelves[pos]
             rack.set_occupazione_corrente(items_rimanenti)
+            rack.set_occupazione_temp(items_rimanenti)
             items_placed += items_rimanenti
 
         print(f"Items piazzati: {items_placed}")

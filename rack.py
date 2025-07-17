@@ -4,6 +4,7 @@ class Rack:
         self._capienza = capienza
         self._colore = colore
         self._occupazione_corrente = 0
+        self._occupazione_temp = 0
 
     # Getter per capienza
     def get_capienza(self) -> int:
@@ -14,6 +15,16 @@ class Rack:
         if nuova_capienza < 0:
             raise ValueError("La capienza non può essere negativa")
         self._capienza = nuova_capienza
+
+    def get_occupazione_temp(self) -> int:
+        return self._occupazione_temp
+
+    def set_occupazione_temp(self, nuova_occupazione: int) -> None:
+        if nuova_occupazione < 0:
+            raise ValueError("L'occupazione non può essere negativa")
+        if nuova_occupazione > self._capienza:
+            raise ValueError("L'occupazione non può superare la capienza massima")
+        self._occupazione_temp = nuova_occupazione
 
     # Getter per colore
     def get_colore(self) -> str:
