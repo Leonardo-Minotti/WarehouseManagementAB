@@ -29,6 +29,23 @@ class WarehouseModel(Model):
             initial_warehouse_filling=50,  # Percentuale di riempimento iniziale
             simulator: ABMSimulator = None,
     ):
+        # Attributi per la raccolta dati
+        self.data_collector = {
+            'step': [],
+            'occupazione_totale': [],
+            'ordini_carico_processati': [],
+            'ordini_scarico_processati': [],
+            'dock_carico_liberi': [],
+            'dock_scarico_liberi': [],
+            'muletti_carico_liberi': [],
+            'muletti_scarico_liberi': [],
+            'ordini_carico_in_coda': [],
+            'ordini_scarico_in_coda': []
+        }
+
+        self.ordini_carico_completati = 0
+        self.ordini_scarico_completati = 0
+
 
         super().__init__()
         self.simulator = simulator
@@ -67,6 +84,40 @@ class WarehouseModel(Model):
 
 
         self._create_layout(num_unloading, num_loading, num_unloading_forkLift, num_loading_forkLift)
+
+    def collect_data(self):
+        """Raccoglie i dati per ogni step della simulazione"""
+        stats = self.get_warehouse_stats()
+
+        # Conta dock liberi
+        dock_carico_liberi = sum(1 for dock in self.loading_docks if dock.free)
+        dock_scarico_liberi = sum(1 for dock in self.unloading_docks if dock.free)
+
+        # Conta muletti liberi usando la griglia invece del scheduler
+        muletti_carico_liberi = 0
+        muletti_scarico_liberi = 0
+
+        # Itera attraverso tutte le posizioni della griglia per trovare gli agenti
+        for x in range(self.grid.width):
+            for y in range(self.grid.height):
+                cell_contents = self.grid.get_cell_list_contents([(x, y)])
+                for agent in cell_contents:
+                    if isinstance(agent, LoadingForkLift) and agent.free:
+                        muletti_carico_liberi += 1
+                    elif isinstance(agent, UnloadingForkLift) and agent.free:
+                        muletti_scarico_liberi += 1
+
+        # Raccogli i dati usando le chiavi corrette
+        self.data_collector['step'].append(self.step_counter)
+        self.data_collector['occupazione_totale'].append(stats['current_percentage'])  # Usa current_percentage
+        self.data_collector['ordini_carico_processati'].append(self.ordini_carico_completati)
+        self.data_collector['ordini_scarico_processati'].append(self.ordini_scarico_completati)
+        self.data_collector['dock_carico_liberi'].append(dock_carico_liberi)
+        self.data_collector['dock_scarico_liberi'].append(dock_scarico_liberi)
+        self.data_collector['muletti_carico_liberi'].append(muletti_carico_liberi)
+        self.data_collector['muletti_scarico_liberi'].append(muletti_scarico_liberi)
+        self.data_collector['ordini_carico_in_coda'].append(len(self.loading_order_queue))
+        self.data_collector['ordini_scarico_in_coda'].append(len(self.unloading_order_queue))
 
     def _create_shelves(self):
         """Crea gli scaffali usando la classe Rack e li riempie secondo la percentuale globale"""
@@ -405,6 +456,21 @@ class WarehouseModel(Model):
 
         self.agents_by_type[UnloadingForkLift].shuffle_do("step")
         self.agents_by_type[LoadingForkLift].shuffle_do("step")
+
+        # Prima di chiamare collect_data, assicurati di aggiornare i contatori
+        # Conta gli ordini completati
+        for dock in self.loading_docks:
+            if dock.current_order is None and hasattr(dock, '_order_completed'):
+                self.ordini_carico_completati += 1
+                dock._order_completed = False
+
+        for dock in self.unloading_docks:
+            if dock.current_order is None and hasattr(dock, '_order_completed'):
+                self.ordini_scarico_completati += 1
+                dock._order_completed = False
+
+        # Richiamo collezione dati
+        self.collect_data()
 
 
 

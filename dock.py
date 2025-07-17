@@ -44,6 +44,7 @@ class UnloadingDock(Dock):
         completed_order = self.current_order
         self.current_order = None
         self.free = True
+        self._order_completed = True  # Aggiungi questo flag
         return completed_order
 
 
@@ -77,4 +78,5 @@ class LoadingDock(Dock):
         completed_order = self.current_order
         self.current_order = None
         self.free = True
+        self._order_completed = True  # Aggiungi questo flag
         return completed_order
