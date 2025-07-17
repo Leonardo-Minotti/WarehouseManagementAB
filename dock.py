@@ -29,6 +29,8 @@ class UnloadingDock(Dock):
         self.free = free
         self.current_order = None  # Aggiungo l'attributo per l'ordine corrente
         self.divisione_temp = None
+
+
     def receive_order(self, order):
         if self.free:
             self.current_order = order
@@ -36,15 +38,22 @@ class UnloadingDock(Dock):
             for colore, qty in order.get_tutte_capacita().items():
                 self.divisione_temp.set_capacita_per_colore(colore, qty)
             self.free = False
+            self.current_order.step_inizio = self.model.steps
             return True
         else:
             return False
 
     def complete_order(self):
         completed_order = self.current_order
+        self.current_order.step_fine = self.model.steps
+        durata = self.current_order.step_fine - self.current_order.step_inizio
+        self.model.ordini_scarico_durata_processamento.append(durata)
+
         self.current_order = None
         self.free = True
         self._order_completed = True  # Aggiungi questo flag
+
+
         return completed_order
 
 
@@ -70,6 +79,7 @@ class LoadingDock(Dock):
                 self.divisione_temp.set_capacita_per_colore(colore, qty)
 
             self.free = False
+            self.current_order.step_inizio = self.model.steps
 
             return True
         else:
@@ -77,6 +87,9 @@ class LoadingDock(Dock):
 
     def complete_order(self):
         completed_order = self.current_order
+        self.current_order.step_fine = self.model.steps
+        durata = self.current_order.step_fine - self.current_order.step_inizio
+        self.model.ordini_carico_durata_processamento.append(durata)
         self.current_order = None
         self.free = True
         self._order_completed = True  # Aggiungi questo flag

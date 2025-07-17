@@ -475,6 +475,20 @@ def create_warehouse_plots(model):
     ax5.grid(True, alpha=0.3)
     ax5.legend()
 
+    # Grafico 6: Tempo Medio di Processamento Ordini
+    ax6 = axes[2, 1]
+    ax6.plot(steps, model.data_collector['tempo_medio_ordine_carico'],
+             color='teal', linewidth=2, label='Tempo Medio Ordine_Carico')
+    ax6.plot(steps, model.data_collector['tempo_medio_ordine_scarico'],
+             color='teal', linewidth=2, label='Tempo Medio Ordine_Scarico')
+
+    ax6.set_title('Tempo Medio di Processamento Ordini carico e scarico')
+    ax6.set_xlabel('Step')
+    ax6.set_ylabel('Tempo Medio (in step)')
+    ax6.grid(True, alpha=0.3)
+    ax6.legend()
+
+
     plt.tight_layout()
     return fig
 

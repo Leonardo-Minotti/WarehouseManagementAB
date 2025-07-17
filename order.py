@@ -14,9 +14,12 @@ class OrderColor(Enum):
 
 class Order:
 
+
     def __init__(self, capacita_totale: int):
         self._capacita_totale = capacita_totale
         self._capacita_per_colore = self._dividi_capacita_casualmente()
+        self.step_inizio = None
+        self.step_fine = None
 
     def _dividi_capacita_casualmente(self) -> Dict[OrderColor, int]:
         colori = list(OrderColor)

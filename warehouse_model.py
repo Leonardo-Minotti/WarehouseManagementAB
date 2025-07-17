@@ -28,6 +28,7 @@ class WarehouseModel(Model):
             num_loading_forkLift=1,
             initial_warehouse_filling=50,  # Percentuale di riempimento iniziale
             simulator: ABMSimulator = None,
+
     ):
         # Attributi per la raccolta dati
         self.data_collector = {
@@ -40,9 +41,12 @@ class WarehouseModel(Model):
             'muletti_carico_liberi': [],
             'muletti_scarico_liberi': [],
             'ordini_carico_in_coda': [],
-            'ordini_scarico_in_coda': []
+            'ordini_scarico_in_coda': [],
+            'tempo_medio_ordine_carico' : [],
+            'tempo_medio_ordine_scarico': []
         }
-
+        self.ordini_carico_durata_processamento = []
+        self.ordini_scarico_durata_processamento = []
         self.ordini_carico_completati = 0
         self.ordini_scarico_completati = 0
 
@@ -107,6 +111,16 @@ class WarehouseModel(Model):
                     elif isinstance(agent, UnloadingForkLift) and agent.free:
                         muletti_scarico_liberi += 1
 
+        if self.ordini_carico_durata_processamento:
+            media_carico = sum(self.ordini_carico_durata_processamento) / len(self.ordini_carico_durata_processamento)
+        else:
+            media_carico = 0
+
+        if self.ordini_scarico_durata_processamento:
+            media_scarico = sum(self.ordini_scarico_durata_processamento) / len(self.ordini_scarico_durata_processamento)
+        else:
+            media_scarico = 0
+
         # Raccogli i dati usando le chiavi corrette
         self.data_collector['step'].append(self.step_counter)
         self.data_collector['occupazione_totale'].append(stats['current_percentage'])  # Usa current_percentage
@@ -118,6 +132,8 @@ class WarehouseModel(Model):
         self.data_collector['muletti_scarico_liberi'].append(muletti_scarico_liberi)
         self.data_collector['ordini_carico_in_coda'].append(len(self.loading_order_queue))
         self.data_collector['ordini_scarico_in_coda'].append(len(self.unloading_order_queue))
+        self.data_collector['tempo_medio_ordine_carico'].append(media_carico)
+        self.data_collector['tempo_medio_ordine_scarico'].append(media_scarico)
 
     def _create_shelves(self):
         """Crea gli scaffali usando la classe Rack e li riempie secondo la percentuale globale"""
