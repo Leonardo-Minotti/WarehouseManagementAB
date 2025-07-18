@@ -409,7 +409,7 @@ def create_warehouse_plots(model):
         return None
 
     # Crea una figura con subplots
-    fig, axes = plt.subplots(3, 2, figsize=(16, 16))
+    fig, axes = plt.subplots(4, 2, figsize=(15, 20))
     fig.suptitle('Analisi Prestazioni Warehouse', fontsize=16, fontweight='bold')
 
     steps = model.data_collector['step']
@@ -489,6 +489,31 @@ def create_warehouse_plots(model):
     ax6.legend()
 
 
+    # Grafico 7: Distribuzione dei pacchi per colore nel magazzino (con spazio vuoto)
+    ax7 = axes[3, 0]
+    distribuzioni_colori = model.data_collector.get("distribuzione_colori", [])
+    if distribuzioni_colori:
+        distribuzione_finale = distribuzioni_colori[-1]  # Ultimo step
+
+        # Rimuovi i colori con quantità 0
+        colori = [colore for colore, count in distribuzione_finale.items() if count > 0]
+        valori = [count for colore, count in distribuzione_finale.items() if count > 0]
+
+        mappa_colori = {
+            'blue': 'blue',
+            'red': 'red',
+            'green': 'green',
+            'yellow': 'gold',
+            'orange': 'orange',
+            'gray': 'lightgray'
+        }
+        colori_visuali = [mappa_colori[colore] for colore in colori]
+
+        ax7.pie(valori, labels=colori, autopct='%1.1f%%', colors=colori_visuali)
+        ax7.set_title("Distribuzione pacchi per colore (con spazio vuoto)")
+
+    ax8 = axes[3, 1]
+    ax8.axis('off')
     plt.tight_layout()
     return fig
 

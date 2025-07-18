@@ -43,7 +43,7 @@ class WarehouseModel(Model):
             'ordini_carico_in_coda': [],
             'ordini_scarico_in_coda': [],
             'tempo_medio_ordine_carico' : [],
-            'tempo_medio_ordine_scarico': []
+            'tempo_medio_ordine_scarico': [],
         }
         self.ordini_carico_durata_processamento = []
         self.ordini_scarico_durata_processamento = []
@@ -120,6 +120,16 @@ class WarehouseModel(Model):
             media_scarico = sum(self.ordini_scarico_durata_processamento) / len(self.ordini_scarico_durata_processamento)
         else:
             media_scarico = 0
+
+        # Conteggio pacchi per colore e spazio vuoto
+        colore_counts = {'blue': 0, 'red': 0, 'green': 0, 'yellow': 0, 'orange': 0, 'gray': 0}
+        for rack in self.shelves.values():
+            color = rack.get_colore()
+            occupato = rack.get_occupazione_corrente()
+            colore_counts[color] += occupato
+            colore_counts['gray'] += (rack.get_capienza() - occupato)
+
+        self.data_collector.setdefault('distribuzione_colori', []).append(colore_counts)
 
         # Raccogli i dati usando le chiavi corrette
         self.data_collector['step'].append(self.step_counter)
