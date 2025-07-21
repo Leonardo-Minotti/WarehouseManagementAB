@@ -156,8 +156,8 @@ def warehouse_status_component(model):
         next_order = model.order_time - (model.step_counter - model.last_order_step)
         content.append(f"**Prossimo ordine tra:** {next_order} step")
 
-    if hasattr(model, 'last_unloading_order_step') and hasattr(model, 'unloading_order_time'):
-        next_unloading_order = model.unloading_order_time - (model.step_counter - model.last_unloading_order_step)
+    if hasattr(model, 'last_unloading_order_step'):
+        next_unloading_order = model.order_time - (model.step_counter - model.last_unloading_order_step)
         content.append(f"**Prossimo ordine scarico tra:** {next_unloading_order} step")
 
     return solara.Markdown("\n".join(content))
@@ -510,9 +510,9 @@ def create_warehouse_plots(model):
     # Grafico 6: Tempo Medio di Processamento Ordini
     ax6 = axes[2, 1]
     ax6.plot(steps, model.data_collector['tempo_medio_ordine_carico'],
-             color='teal', linewidth=2, label='Tempo Medio Ordine_Carico')
+             color='green', linewidth=2, label='Tempo Medio Ordine_Carico')
     ax6.plot(steps, model.data_collector['tempo_medio_ordine_scarico'],
-             color='teal', linewidth=2, label='Tempo Medio Ordine_Scarico')
+             color='red', linewidth=2, label='Tempo Medio Ordine_Scarico')
 
     ax6.set_title('Tempo Medio di Processamento Ordini carico e scarico')
     ax6.set_xlabel('Step')
@@ -565,7 +565,7 @@ model_params = {
     "num_unloading": Slider("Number of unloading docks", 1, 1, 5),
     "num_loading": Slider("Number of loading docks", 1, 1, 5),
     "dock_capacity": Slider("Maxinum dock capacity", 1, 5, 10),
-    "order_time": Slider("Time order", 1, 10, 20),
+    "order_time": Slider("Time order", 1, 10, 100),
     "num_unloading_forkLift": Slider("Number of unloading forkLifts", 1, 1, 10),
     "num_loading_forkLift": Slider("Number of loading forkLifts", 1, 1, 10),
     "initial_warehouse_filling": Slider("initial warehouse filling percentage", 1, 1, 100)

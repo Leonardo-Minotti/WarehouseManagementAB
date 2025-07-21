@@ -21,9 +21,9 @@ class WarehouseModel(Model):
             height=30,
             num_unloading=2,
             num_loading=2,
-            dock_capacity=10,
+            dock_capacity=5,
             order_time=10,
-            unloading_order_time=15,  # Tempo per generare ordini di scarico
+            unloading_order_time=10,  # Tempo per generare ordini di scarico
             num_unloading_forkLift=1,
             num_loading_forkLift=1,
             initial_warehouse_filling=50,  # Percentuale di riempimento iniziale
@@ -447,8 +447,15 @@ class WarehouseModel(Model):
         return self.loading_order_queue
 
     def step(self):
-        self.step_counter += 1
 
+        if self.step_counter == 0:
+            nuovo_ordine = self.generate_loading_order()
+            self.assign_loading_order_to_dock(nuovo_ordine)
+
+            nuovo_ordine = self.generate_unloading_order()
+            self.assign_unloading_order_to_dock(nuovo_ordine)
+
+        self.step_counter += 1
         # Gestione ordini di CARICO
         if self.step_counter - self.last_loading_order_step >= self.order_time:
             nuovo_ordine = self.generate_loading_order()
@@ -462,7 +469,7 @@ class WarehouseModel(Model):
             self.last_loading_order_step = self.step_counter
 
         # Gestione ordini di SCARICO
-        if self.step_counter - self.last_unloading_order_step >= self.unloading_order_time:
+        if self.step_counter - self.last_unloading_order_step >= self.order_time:
             nuovo_ordine = self.generate_unloading_order()
 
             if self.assign_unloading_order_to_dock(nuovo_ordine):
@@ -483,18 +490,6 @@ class WarehouseModel(Model):
         self.agents_by_type[UnloadingForkLift].shuffle_do("step")
         self.agents_by_type[LoadingForkLift].shuffle_do("step")
 
-        # Prima di chiamare collect_data, assicurati di aggiornare i contatori
-        # Conta gli ordini completati
-        for dock in self.loading_docks:
-            if dock.current_order is None and hasattr(dock, '_order_completed'):
-                self.ordini_carico_completati += 1
-                dock._order_completed = False
-
-        for dock in self.unloading_docks:
-            if dock.current_order is None and hasattr(dock, '_order_completed'):
-                self.ordini_scarico_completati += 1
-                dock._order_completed = False
-
         # Richiamo collezione dati
         self.collect_data()
 
@@ -514,6 +509,3 @@ class WarehouseModel(Model):
             "current_percentage": current_percentage
         }
 
-    def is_rack_position(self, pos):
-        """Controlla se la posizione contiene un rack (deprecato, usa is_shelf_position)"""
-        return self.is_shelf_position(pos)

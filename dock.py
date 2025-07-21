@@ -47,8 +47,9 @@ class UnloadingDock(Dock):
         completed_order = self.current_order
         self.current_order.step_fine = self.model.steps
         durata = self.current_order.step_fine - self.current_order.step_inizio
-        self.model.ordini_scarico_durata_processamento.append(durata)
 
+        self.model.ordini_scarico_durata_processamento.append(durata)
+        self.model.ordini_scarico_completati += 1
         self.current_order = None
         self.free = True
         self._order_completed = True  # Aggiungi questo flag
@@ -90,6 +91,7 @@ class LoadingDock(Dock):
         self.current_order.step_fine = self.model.steps
         durata = self.current_order.step_fine - self.current_order.step_inizio
         self.model.ordini_carico_durata_processamento.append(durata)
+        self.model.ordini_carico_completati += 1
         self.current_order = None
         self.free = True
         self._order_completed = True  # Aggiungi questo flag
