@@ -363,6 +363,38 @@ def post_process_space(ax):
 
     # FINE DISCEGNO TRACCE
 
+    # Disegna Stand-by zone 3x3  in (14, 1) UNLOADING
+    square_center_x = 28
+    square_center_y = 28
+    square_size = 3  # 3x3
+    square_color = 'lightgray'
+
+    # Calcola il punto in basso a sinistra
+    bottom_left_x = square_center_x - 1
+    bottom_left_y = square_center_y - 1
+
+    # Disegna un singolo rettangolo grande
+    rect = patches.Rectangle((bottom_left_x - 0.45, bottom_left_y - 0.45),
+                             0.92 * square_size, 0.92 * square_size,
+                             linewidth=1.5, edgecolor='lightgray',
+                             facecolor=square_color, alpha=0.7, zorder=1)
+    ax.add_patch(rect)
+
+    # Disegna Stand-by zone 3x3  in (14, 1) LOADING
+    square_center_x = 14
+    square_center_y = 1
+
+    # Calcola il punto in basso a sinistra
+    bottom_left_x = square_center_x - 1
+    bottom_left_y = square_center_y - 1
+
+    # Disegna un singolo rettangolo grande
+    rect = patches.Rectangle((bottom_left_x - 0.45, bottom_left_y - 0.45),
+                             0.92 * square_size, 0.92 * square_size,
+                             linewidth=1.5, edgecolor='lightgray',
+                             facecolor=square_color, alpha=0.7, zorder=1)
+    ax.add_patch(rect)
+    ''''
     # === AGGIUNGI QUESTA SEZIONE PER I BORDI DELLE CELLE ===
     # Disegna i bordi di tutte le celle della griglia
     grid_color = 'red'
@@ -386,7 +418,7 @@ def post_process_space(ax):
     start_y = 4
 
     # TODO : FINE GRIGLIA DA ELIMINARE
-
+'''''
 
 def custom_space_component(model):
     """Componente spazio personalizzato che riceve il modello direttamente"""
