@@ -1,18 +1,13 @@
 import solara
 from matplotlib import patches, pyplot as plt
-from mesa.visualization import SolaraViz, make_plot_component
-import numpy as np
-import pandas as pd
 
 from dock import Dock, UnloadingDock, LoadingDock
 from forkLift import ForkLift, UnloadingForkLift, LoadingForkLift
 from warehouse_model import WarehouseModel
 from mesa.experimental.devs import ABMSimulator
 from mesa.visualization import (
-    CommandConsole,
     Slider,
     SolaraViz,
-    make_plot_component,
     make_space_component,
 )
 

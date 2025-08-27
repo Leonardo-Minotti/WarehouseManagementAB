@@ -1,8 +1,8 @@
 # forkLift.py
 from random import choice
-from mesa.discrete_space import CellAgent, FixedAgent
+from mesa.discrete_space import CellAgent
 from pathfindingA import find_path
-from typing import List, Tuple, Optional
+from typing import Tuple, Optional
 
 class ForkLift(CellAgent):
     def __init__(
