@@ -1,6 +1,6 @@
 # forkLift.py
-from mesa.agent import Agent
-from mesa.discrete_space import CellAgent, FixedAgent
+
+from mesa.discrete_space import FixedAgent
 
 from order import Order
 

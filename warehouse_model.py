@@ -1,11 +1,7 @@
 import random
 from collections import deque
-
 from mesa.model import Model
-from mesa.datacollection import DataCollector
 from mesa.space import MultiGrid
-from mesa.discrete_space import OrthogonalVonNeumannGrid
-from mesa.agent import Agent
 from forkLift import ForkLift, UnloadingForkLift, LoadingForkLift
 from mesa.experimental.devs import ABMSimulator
 from dock import Dock, UnloadingDock, LoadingDock
